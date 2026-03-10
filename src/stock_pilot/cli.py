@@ -112,6 +112,53 @@ def cmd_watchlist(args: argparse.Namespace) -> None:
             console.print(f"  • {sym}")
 
 
+def cmd_content(args: argparse.Namespace) -> None:
+    """Generate short-form content for top signals."""
+    from stock_pilot.content.pipeline import ContentPipeline
+    from stock_pilot.scanner import Scanner
+
+    pipeline = ContentPipeline(output_dir=args.output_dir)
+    upload = args.upload and not args.dry_run
+
+    if args.symbols:
+        symbols = [s.upper() for s in args.symbols]
+    else:
+        console.print("[bold blue]📡 시그널 스캔 중...[/bold blue]")
+        scanner = Scanner(skip_news=False)
+        result = scanner.run_sync(send_alerts=False)
+        actionable = [s for s in result.signals if s.is_actionable]
+        symbols = [s.symbol for s in actionable[: args.top_n]]
+        if not symbols:
+            console.print("[yellow]오늘 액션 가능한 시그널 없음[/yellow]")
+            return
+
+    console.print(f"[bold blue]🎬 숏폼 콘텐츠 생성: {symbols}[/bold blue]")
+    results = pipeline.run_for_symbols(symbols, upload=upload)
+
+    table = Table(title="Content Pipeline Results")
+    table.add_column("Symbol")
+    table.add_column("Content")
+    table.add_column("Card")
+    table.add_column("TTS")
+    table.add_column("Video")
+    table.add_column("YouTube")
+    table.add_column("Errors")
+
+    ok = "[green]✓[/green]"
+    ng = "[red]✗[/red]"
+    for r in results:
+        table.add_row(
+            r.symbol,
+            ok if r.content_ok else ng,
+            ok if r.card_news_ok else ng,
+            ok if r.tts_ok else ng,
+            ok if r.video_ok else ng,
+            ok if r.youtube_ok else ng,
+            "; ".join(r.errors[:2]) if r.errors else "",
+        )
+    console.print(table)
+
+
 def cmd_schedule(args: argparse.Namespace) -> None:
     """Start the scheduler for periodic scans."""
     from apscheduler.schedulers.blocking import BlockingScheduler
@@ -168,6 +215,15 @@ def main() -> None:
     sched_p.add_argument("--interval", type=int, help="분 단위 간격 (기본: 15)")
     sched_p.add_argument("--no-news", action="store_true")
     sched_p.set_defaults(func=cmd_schedule)
+
+    # content
+    content_p = sub.add_parser("content", help="숏폼 콘텐츠 생성")
+    content_p.add_argument("symbols", nargs="*", help="종목 코드 (없으면 상위 시그널 종목)")
+    content_p.add_argument("--upload", action="store_true", help="YouTube/Instagram 자동 업로드")
+    content_p.add_argument("--dry-run", action="store_true", help="생성만, 업로드 안 함")
+    content_p.add_argument("--output-dir", default="output", help="출력 디렉토리")
+    content_p.add_argument("--top-n", type=int, default=3, help="상위 N개 종목")
+    content_p.set_defaults(func=cmd_content)
 
     args = parser.parse_args()
     setup_logging(args.verbose)

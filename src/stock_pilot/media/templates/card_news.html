@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1080, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1080px; height: 1080px; overflow: hidden;
+    background: #0d1117;
+    font-family: 'Noto Sans KR', sans-serif;
+    color: #e6edf3;
+  }
+  .card {
+    width: 1080px; height: 1080px;
+    background: linear-gradient(145deg, #0d1117 0%, #161b22 60%, #0d1117 100%);
+    display: flex; flex-direction: column;
+    padding: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, {{CHANGE_COLOR}}, transparent);
+  }
+  .brand {
+    font-size: 18px; font-weight: 400; color: #8b949e;
+    letter-spacing: 4px; text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+  .symbol-row {
+    display: flex; align-items: baseline; gap: 24px; margin-bottom: 16px;
+  }
+  .symbol { font-size: 56px; font-weight: 900; color: #e6edf3; }
+  .price { font-size: 42px; font-weight: 700; color: #e6edf3; }
+  .change {
+    font-size: 32px; font-weight: 700;
+    color: {{CHANGE_COLOR}};
+    padding: 6px 16px;
+    border: 2px solid {{CHANGE_COLOR}}44;
+    border-radius: 8px;
+    background: {{CHANGE_COLOR}}11;
+  }
+  .divider {
+    width: 60px; height: 3px;
+    background: {{CHANGE_COLOR}};
+    margin: 32px 0;
+  }
+  .title {
+    font-size: 52px; font-weight: 900;
+    line-height: 1.2;
+    color: #e6edf3;
+    margin-bottom: 20px;
+  }
+  .subtitle {
+    font-size: 28px; font-weight: 400;
+    color: #8b949e;
+    margin-bottom: 40px;
+  }
+  .body {
+    font-size: 26px; font-weight: 400;
+    color: #c9d1d9;
+    line-height: 1.8;
+    flex: 1;
+  }
+  .footer {
+    font-size: 16px; color: #484f58;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #21262d;
+  }
+  .chart-area {
+    position: absolute; right: 60px; bottom: 100px;
+    width: 320px; height: 200px;
+    opacity: 0.3;
+  }
+  .chart-area img { width: 100%; height: 100%; object-fit: contain; }
+  .dot-pattern {
+    position: absolute; top: 0; right: 0;
+    width: 400px; height: 400px;
+    opacity: 0.03;
+    background-image: radial-gradient(#e6edf3 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="dot-pattern"></div>
+  <div class="brand">Stock Pilot</div>
+  <div class="symbol-row">
+    <span class="symbol">{{SYMBOL}}</span>
+    <span class="price">{{PRICE}}</span>
+    <span class="change">{{CHANGE}}</span>
+  </div>
+  <div class="divider"></div>
+  <div class="title">{{TITLE}}</div>
+  <div class="subtitle">{{SUBTITLE}}</div>
+  <div class="body">{{BODY}}</div>
+  <div class="chart-area">
+    <img src="data:image/png;base64,{{CHART_B64}}" alt="chart">
+  </div>
+  <div class="footer">본 콘텐츠는 투자 조언이 아닙니다. 투자의 모든 책임은 본인에게 있습니다.</div>
+</div>
+</body>
+</html>
