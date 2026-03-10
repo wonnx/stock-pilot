@@ -6,7 +6,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
-from stock_pilot.alerts.telegram import TelegramAlerter
+from stock_pilot.alerts.kakao import KakaoAlerter
 from stock_pilot.analysis.indicators import TechnicalAnalyzer
 from stock_pilot.data.fetcher import MarketDataFetcher
 from stock_pilot.data.watchlist import Watchlist
@@ -35,12 +35,12 @@ class Scanner:
         news_collector: NewsCollector | None = None,
         sentiment_analyzer: SentimentAnalyzer | None = None,
         scorer: SignalScorer | None = None,
-        alerter: TelegramAlerter | None = None,
+        alerter: KakaoAlerter | None = None,
         skip_news: bool = False,
     ) -> None:
         from stock_pilot.data.watchlist import watchlist as default_watchlist
         from stock_pilot.data.fetcher import fetcher as default_fetcher
-        from stock_pilot.alerts.telegram import alerter as default_alerter
+        from stock_pilot.alerts.kakao import alerter as default_alerter
 
         self._watchlist = watchlist or default_watchlist
         self._fetcher = fetcher or default_fetcher
@@ -82,7 +82,7 @@ class Scanner:
 
         alerts_sent = 0
         if send_alerts and ranked:
-            alerts_sent = await self._alerter.send_batch(ranked)
+            alerts_sent = self._alerter.send_batch(ranked)
 
         return ScanResult(signals=ranked, errors=errors, alerts_sent=alerts_sent)
 
