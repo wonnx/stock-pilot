@@ -7,6 +7,8 @@ from stock_pilot.content.generator import ContentPackage
 logger = logging.getLogger(__name__)
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
+# stock-pilot root (where node_modules lives)
+_PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 
 def _render_html(pkg: ContentPackage, chart_b64: str = "") -> str:
@@ -36,7 +38,9 @@ def generate_card_news(pkg: ContentPackage, output_path: Path, chart_b64: str = 
         html_path = f.name
 
     puppet_script = _get_puppet_script(html_path, str(output_path))
-    script_path = Path(tempfile.mktemp(suffix=".mjs"))
+    # Write script into project root so Node.js ESM can resolve 'puppeteer' from node_modules
+    import uuid
+    script_path = _PROJECT_ROOT / f"_card_news_{uuid.uuid4().hex}.mjs"
     script_path.write_text(puppet_script, encoding="utf-8")
 
     try:
@@ -45,6 +49,7 @@ def generate_card_news(pkg: ContentPackage, output_path: Path, chart_b64: str = 
             capture_output=True,
             text=True,
             timeout=30,
+            cwd=str(_PROJECT_ROOT),
         )
         if result.returncode != 0:
             logger.error("Puppeteer failed: %s", result.stderr)
