@@ -1,11 +1,16 @@
-from dataclasses import dataclass
-from typing import Optional
+from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import Optional, TYPE_CHECKING
 import json, logging
 import anthropic
 from stock_pilot.news.collector import NewsItem
 from stock_pilot.utils.config import config
 
+if TYPE_CHECKING:
+    from stock_pilot.analysis.indicators import TechnicalIndicators
+
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ContentPackage:
@@ -18,6 +23,17 @@ class ContentPackage:
     card_subtitle: str
     card_body: str
     caption: str
+    # 퀀트 분석 데이터 (Remotion 템플릿용)
+    rsi: float = 0.0
+    macd: float = 0.0
+    macd_signal: float = 0.0
+    volume_ratio: float = 1.0
+    bb_position: str = "middle"  # "upper" | "middle" | "lower"
+    ema_trend: str = "mixed"     # "bullish" | "bearish" | "mixed"
+    quant_summary: str = ""      # 퀀트 분석 요약 텍스트
+    # 차트 데이터 포인트 (최근 20일 종가, Remotion 애니메이션용)
+    chart_data: list[float] = field(default_factory=list)
+
 
 class ContentGenerator:
     def __init__(self):
@@ -35,6 +51,8 @@ class ContentGenerator:
         prev_close: float,
         news_items: list[NewsItem],
         sentiment_summary: str = "",
+        tech: "TechnicalIndicators | None" = None,
+        chart_data: list[float] | None = None,
     ) -> Optional[ContentPackage]:
         # Calculate change
         change_pct = ((price - prev_close) / prev_close * 100) if prev_close else 0.0
@@ -44,6 +62,21 @@ class ContentGenerator:
         news_text = "\n".join(
             f"- {item.title}" for item in news_items[:5]
         ) if news_items else "(최근 주요 뉴스 없음)"
+
+        # 퀀트 분석 텍스트
+        quant_text = ""
+        if tech:
+            rsi_zone = tech.rsi_zone
+            ema_trend = tech.ema_trend
+            bb_pos = tech.bb_position
+            vol_spike = "거래량 스파이크 발생" if tech.volume_spike else "거래량 정상"
+            quant_text = f"""
+퀀트 분석:
+- RSI(14): {tech.rsi14:.1f} ({rsi_zone})
+- MACD: {tech.macd:.3f} / Signal: {tech.macd_signal:.3f} (히스토그램: {tech.macd_hist:.3f})
+- 볼린저밴드: {bb_pos} ({tech.bb_lower:.2f} ~ {tech.bb_upper:.2f})
+- EMA 추세: {ema_trend} (EMA9={tech.ema9:.2f}, EMA21={tech.ema21:.2f}, EMA50={tech.ema50:.2f})
+- {vol_spike}"""
 
         prompt = f"""당신은 한국의 금융 전문 숏폼 채널 콘텐츠 제작자입니다.
 
@@ -55,14 +88,16 @@ class ContentGenerator:
 - 오늘의 주요 뉴스:
 {news_text}
 {f"- 시장 분석: {sentiment_summary}" if sentiment_summary else ""}
+{quant_text}
 
 다음 JSON 형식으로 콘텐츠를 생성하세요 (마크다운 없이 순수 JSON):
 {{
-  "script": "60초 이내 숏폼 영상 나레이션. 자연스럽고 임팩트 있는 한국어. AI 느낌 최소화. 끝에 '본 콘텐츠는 투자 조언이 아닙니다.' 포함.",
+  "script": "30초 숏폼 영상 나레이션 (150자 이내). 자연스럽고 임팩트 있는 한국어. 퀀트 지표를 자연스럽게 언급. AI 느낌 최소화. 끝에 '본 콘텐츠는 투자 조언이 아닙니다.' 포함.",
   "card_title": "카드뉴스 헤드라인 (15자 이내, 임팩트 있게)",
   "card_subtitle": "서브타이틀 (30자 이내, 핵심 이유)",
-  "card_body": "카드뉴스 본문 3줄. 숫자와 팩트 위주.",
-  "caption": "SNS 캡션 (인스타/유튜브). 이모지 적절히. 관련 해시태그 5개. 끝에 '⚠️ 본 콘텐츠는 투자 조언이 아닙니다.' 포함."
+  "card_body": "카드뉴스 본문 3줄. 숫자와 팩트 위주. 퀀트 지표 포함.",
+  "caption": "SNS 캡션 (인스타/유튜브). 이모지 적절히. 관련 해시태그 5개. 끝에 '⚠️ 본 콘텐츠는 투자 조언이 아닙니다.' 포함.",
+  "quant_summary": "퀀트 관점 2~3줄 요약. RSI 과매수/과매도 여부, MACD 추세, 볼린저밴드 위치 등 전문적 분석."
 }}
 
 임팩트 있고 전문적인 금융 채널 느낌으로 작성하세요."""
@@ -74,7 +109,14 @@ class ContentGenerator:
                 max_tokens=1024,
                 messages=[{"role": "user", "content": prompt}],
             )
-            data = json.loads(msg.content[0].text.strip())
+            raw = msg.content[0].text.strip()
+            # JSON 블록 추출 (```json ... ``` 래핑 가능)
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            data = json.loads(raw.strip())
+
             return ContentPackage(
                 symbol=symbol,
                 price=price,
@@ -85,6 +127,14 @@ class ContentGenerator:
                 card_subtitle=data.get("card_subtitle", f"{change_pct:+.2f}%"),
                 card_body=data.get("card_body", ""),
                 caption=data.get("caption", ""),
+                quant_summary=data.get("quant_summary", ""),
+                rsi=tech.rsi14 if tech else 0.0,
+                macd=tech.macd if tech else 0.0,
+                macd_signal=tech.macd_signal if tech else 0.0,
+                volume_ratio=(tech.volume / tech.volume_sma20) if (tech and tech.volume_sma20 > 0) else 1.0,
+                bb_position=tech.bb_position if tech else "middle",
+                ema_trend=tech.ema_trend if tech else "mixed",
+                chart_data=chart_data or [],
             )
         except Exception:
             logger.exception("Content generation failed for %s", symbol)

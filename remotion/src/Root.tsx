@@ -6,7 +6,7 @@ export const RemotionRoot: React.FC = () => {
     <Composition
       id="StockShort"
       component={StockShort}
-      durationInFrames={1800}
+      durationInFrames={900}
       fps={30}
       width={1080}
       height={1920}
@@ -19,6 +19,14 @@ export const RemotionRoot: React.FC = () => {
         cardSubtitle: '아이폰 판매 호조',
         script: '오늘 애플 주가가 2.5% 상승했습니다.',
         audioPath: '',
+        rsi: 55,
+        macd: 0.5,
+        macdSignal: 0.3,
+        volumeRatio: 1.8,
+        bbPosition: 'upper',
+        emaTrend: 'bullish',
+        quantSummary: 'RSI 중립, MACD 골든크로스',
+        chartData: [148, 149, 147, 150, 152, 151, 153, 150, 148, 150, 152, 154, 153, 155, 154, 156, 155, 157, 156, 158],
       }}
     />
   );

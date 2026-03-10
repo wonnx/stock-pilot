@@ -27,6 +27,15 @@ def generate_short_video(
         "cardSubtitle": pkg.card_subtitle,
         "script": pkg.script,
         "audioPath": str(audio_path) if audio_path else "",
+        # 퀀트 분석 데이터
+        "rsi": pkg.rsi,
+        "macd": pkg.macd,
+        "macdSignal": pkg.macd_signal,
+        "volumeRatio": pkg.volume_ratio,
+        "bbPosition": pkg.bb_position,
+        "emaTrend": pkg.ema_trend,
+        "quantSummary": pkg.quant_summary,
+        "chartData": pkg.chart_data,
     }
 
     cmd = [
@@ -35,7 +44,7 @@ def generate_short_video(
         str(output_path),
         "--props", json.dumps(props),
         "--codec", "h264",
-        "--crf", "18",
+        "--crf", "23",
     ]
 
     try:
@@ -44,7 +53,7 @@ def generate_short_video(
             cwd=str(REMOTION_DIR),
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=300,
         )
         if result.returncode != 0:
             logger.error("Remotion render failed: %s", result.stderr[-500:])
