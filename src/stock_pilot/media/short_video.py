@@ -8,6 +8,60 @@ logger = logging.getLogger(__name__)
 REMOTION_DIR = Path(__file__).parent.parent.parent.parent / "remotion"
 
 
+def generate_thumbnail(pkg: ContentPackage, output_path: Path) -> bool:
+    """Render a still thumbnail image via Remotion CLI. Returns True on success."""
+    if not REMOTION_DIR.exists():
+        logger.error("Remotion project not found at %s", REMOTION_DIR)
+        return False
+
+    props = {
+        "symbol": pkg.symbol,
+        "price": pkg.price,
+        "changePct": pkg.change_pct,
+        "cardTitle": pkg.card_title,
+        "cardSubtitle": pkg.card_subtitle,
+        "rsi": pkg.rsi,
+        "macd": pkg.macd,
+        "macdSignal": pkg.macd_signal,
+        "volumeRatio": pkg.volume_ratio,
+        "bbPosition": pkg.bb_position,
+        "emaTrend": pkg.ema_trend,
+        "chartData": pkg.chart_data,
+        "companyNameKo": getattr(pkg, "company_name_ko", ""),
+    }
+
+    cmd = [
+        "npx", "remotion", "still",
+        "StockThumbnail",
+        str(output_path),
+        "--props", json.dumps(props),
+        "--image-format", "jpeg",
+        "--jpeg-quality", "92",
+        "--scale", "2",
+        "--height", "1920",
+        "--width", "1080",
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=str(REMOTION_DIR),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            logger.error("Remotion still render failed: %s", result.stderr[-500:])
+            return False
+        return output_path.exists()
+    except FileNotFoundError:
+        logger.error("npx not found — install Node.js")
+        return False
+    except subprocess.TimeoutExpired:
+        logger.error("Remotion still render timed out")
+        return False
+
+
 def generate_short_video(
     pkg: ContentPackage,
     output_path: Path,
