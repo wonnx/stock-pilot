@@ -1,6 +1,6 @@
 """Short-form video generation via Remotion."""
 from __future__ import annotations
-import json, logging, subprocess
+import json, logging, shutil, subprocess
 from pathlib import Path
 from stock_pilot.content.generator import ContentPackage
 
@@ -18,6 +18,16 @@ def generate_short_video(
         logger.error("Remotion project not found at %s", REMOTION_DIR)
         return False
 
+    # Copy audio to Remotion public dir so staticFile() can access it
+    audio_prop = ""
+    if audio_path and Path(audio_path).exists():
+        public_dir = REMOTION_DIR / "public"
+        public_dir.mkdir(exist_ok=True)
+        dest = public_dir / Path(audio_path).name
+        shutil.copy2(audio_path, dest)
+        audio_prop = Path(audio_path).name
+        logger.info("Copied audio to remotion/public/%s", audio_prop)
+
     props = {
         "symbol": pkg.symbol,
         "price": pkg.price,
@@ -26,7 +36,7 @@ def generate_short_video(
         "cardTitle": pkg.card_title,
         "cardSubtitle": pkg.card_subtitle,
         "script": pkg.script,
-        "audioPath": str(audio_path) if audio_path else "",
+        "audioPath": audio_prop,
         # Quant analysis data
         "rsi": pkg.rsi,
         "macd": pkg.macd,
