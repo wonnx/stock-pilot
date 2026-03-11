@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 
 import httpx
 
+def translate_to_korean(text: str) -> str:
+    """Translate English text to Korean using Google Translate."""
+    try:
+        from deep_translator import GoogleTranslator
+        return GoogleTranslator(source='en', target='ko').translate(text)
+    except Exception:
+        return text  # Fallback: return original English text
+
 def upload_to_catbox(file_path: Path, mime: str = "video/mp4") -> str | None:
     with open(file_path, "rb") as f:
         resp = httpx.post(
@@ -117,6 +125,19 @@ def run():
         except Exception:
             pass
 
+    # Translate news headlines to Korean
+    news_headlines_ko = []
+    for h in news_headlines:
+        parts = h.split("\n")
+        title_ko = translate_to_korean(parts[0])
+        if len(parts) > 1 and parts[1].strip():
+            detail_ko = translate_to_korean(parts[1].strip())
+            news_headlines_ko.append(f"{title_ko}\n{detail_ko}")
+        else:
+            news_headlines_ko.append(title_ko)
+    news_headlines = news_headlines_ko
+    logger.info("Translated %d headlines to Korean", len(news_headlines))
+
     # 4. Template-based content generation (no ANTHROPIC_API_KEY needed)
     direction = hot.direction
     sign = "+" if change_pct > 0 else "-"
@@ -138,25 +159,43 @@ def run():
 
     tts_name = company_name_ko if company_name_ko else symbol
 
-    # Build news narration for TTS
-    news_narration = ""
+    # Build TTS script segments per scene (for audio-visual sync)
+    # S1 Hero (0-5s), S2 News (5-17s), S3 Chart (17-26s), S4 Indicators (26-37s), S5 Conclusion (37-45s)
+    seg_hero = f"오늘 {tts_name}이 {abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}했습니다."
+
+    # News segment — use translated Korean headlines
     if news_headlines:
-        # Extract just the first headline's title for narration
         first_news = news_headlines[0].split("\n")[0]
-        news_narration = f" 주요 뉴스를 보면, {first_news}."
+        seg_news = f"주요 뉴스를 보면, {first_news}."
         if len(news_headlines) > 1:
             second_news = news_headlines[1].split("\n")[0]
-            news_narration += f" 또한, {second_news}."
+            seg_news += f" 또한, {second_news}."
+    else:
+        seg_news = f"{'시장 전반의 매수세가 주요 요인으로 분석됩니다.' if change_pct > 0 else '시장 전반의 매도 압력이 주요 원인으로 분석됩니다.'}"
 
-    script = (
-        f"오늘 {tts_name}이 {abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}했습니다."
-        f"{news_narration} "
+    # Chart segment
+    if chart_data and len(chart_data) >= 2:
+        pct_20d = ((chart_data[-1] / chart_data[0]) - 1) * 100
+        trend_word = "상승" if pct_20d > 0 else "하락"
+        seg_chart = f"차트를 보면, 최근 20거래일간 {abs(pct_20d):.1f}퍼센트 {trend_word}했습니다. {'상승 모멘텀이 강합니다.' if pct_20d > 5 else '지지선 확인이 필요합니다.' if pct_20d < -5 else '횡보 구간입니다.'}"
+    else:
+        seg_chart = "최근 20거래일 차트를 분석합니다."
+
+    # Indicators segment
+    seg_indicators = (
         f"기술적 분석을 보면, RSI는 {rsi:.0f}으로 {rsi_label_ko} 구간이고, "
         f"MACD는 {macd_label_ko}를 보이고 있습니다. "
-        f"거래량은 20일 평균 대비 {vol_ratio:.1f}배 급증했습니다. "
-        f"{'이번 하락이 매수 기회가 될지, 추가 하락이 이어질지 주목됩니다.' if change_pct < 0 else '이 상승세가 지속될 수 있을지 주목됩니다.'}"
-        f" 본 콘텐츠는 투자 조언이 아닙니다."
+        f"거래량은 20일 평균 대비 {vol_ratio:.1f}배입니다."
     )
+
+    # Conclusion segment
+    seg_conclusion = (
+        f"{'이번 하락이 매수 기회가 될지 주목됩니다.' if change_pct < 0 else '이 상승세가 지속될지 주목됩니다.'} "
+        f"본 콘텐츠는 투자 조언이 아닙니다."
+    )
+
+    script_segments = [seg_hero, seg_news, seg_chart, seg_indicators, seg_conclusion]
+    script = " ".join(script_segments)
 
     news_summary = "\n".join(f"- {h.split(chr(10))[0]}" for h in news_headlines[:3]) if news_headlines else ""
     rsi_outlook = (
@@ -231,18 +270,38 @@ def run():
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     video_path = output_dir / f"{symbol}_{ts}_short.mp4"
 
-    # 4b. TTS narration
+    # 4b. TTS narration — generate per-scene audio segments for sync
     from stock_pilot.media.tts import generate_tts
-    tts_path = output_dir / f"{symbol}_{ts}_tts.mp3"
-    tts_ok = generate_tts(script, tts_path)
-    audio_path = tts_path if tts_ok else None
-    if tts_ok:
-        logger.info("TTS generated: %s", tts_path)
-    else:
-        logger.warning("TTS generation skipped (edge-tts not available or failed)")
+    tts_segment_paths = []
+    tts_all_ok = True
+    for i, seg_text in enumerate(script_segments):
+        seg_path = output_dir / f"{symbol}_{ts}_tts_s{i}.mp3"
+        ok = generate_tts(seg_text, seg_path)
+        if ok:
+            tts_segment_paths.append(seg_path)
+            logger.info("TTS segment %d: %s", i, seg_path)
+        else:
+            tts_all_ok = False
+            logger.warning("TTS segment %d failed", i)
+            break
 
-    logger.info("Rendering video (30s)...")
-    ok = generate_short_video(pkg, video_path, audio_path)
+    # Fallback: single audio file if segments fail
+    audio_path = None
+    if not tts_all_ok or len(tts_segment_paths) != 5:
+        tts_path = output_dir / f"{symbol}_{ts}_tts.mp3"
+        if generate_tts(script, tts_path):
+            audio_path = tts_path
+            tts_segment_paths = []
+            logger.info("TTS fallback (single file): %s", tts_path)
+        else:
+            logger.warning("TTS generation skipped")
+
+    logger.info("Rendering video (45s)...")
+    ok = generate_short_video(
+        pkg, video_path, audio_path,
+        audio_segment_paths=tts_segment_paths if tts_segment_paths else None,
+        script_segments=script_segments,
+    )
     if not ok or not video_path.exists():
         logger.error("Video rendering failed")
         sys.exit(1)
