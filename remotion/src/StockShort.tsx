@@ -30,6 +30,8 @@ interface Props {
   chartData?: number[];     // last 20 days close
   companyNameKo?: string;   // Korean company name (e.g. "바이오엔텍")
   newsHeadlines?: string[]; // Top news headlines explaining the move
+  audioSegments?: string[]; // Per-scene audio file names (5 segments)
+  scriptSegments?: string[]; // Per-scene subtitle text (5 segments)
 }
 
 // ─── Color palette ────────────────────────────────────────────────────────────
@@ -333,41 +335,73 @@ const Scene: React.FC<{
   );
 };
 
-// ─── Subtitle overlay ────────────────────────────────────────────────────────────
+// ─── Scene-aware subtitle overlay ────────────────────────────────────────────────
 const SubtitleOverlay: React.FC<{
   script: string;
   frame: number;
+  fps: number;
   totalFrames?: number;
-}> = ({ script, frame, totalFrames = 900 }) => {
-  // Split into sentences (supports Korean period and English punctuation)
-  const sentences = script
-    .split(/(?<=[.!?。])\s*/)
-    .map(s => s.trim())
-    .filter(Boolean);
+  scriptSegments?: string[];
+}> = ({ script, frame, fps, totalFrames = 1350, scriptSegments }) => {
+  // Scene frame ranges (must match main component timing)
+  const sceneRanges = [
+    { start: 0, end: fps * 4.5 },         // S1 Hero
+    { start: fps * 5, end: fps * 16.5 },   // S2 News
+    { start: fps * 17, end: fps * 25.5 },  // S3 Chart
+    { start: fps * 26, end: fps * 36.5 },  // S4 Indicators
+    { start: fps * 37, end: fps * 45 },    // S5 Conclusion
+  ];
 
-  if (sentences.length === 0) return null;
+  // Determine which text to show based on scene timing
+  let currentText = '';
+  let segmentOpacity = 0;
 
-  const framesPerSentence = Math.floor(totalFrames / sentences.length);
-  const currentIdx = Math.min(
-    Math.floor(frame / framesPerSentence),
-    sentences.length - 1,
-  );
-  const sentenceFrame = frame - currentIdx * framesPerSentence;
+  if (scriptSegments && scriptSegments.length === 5) {
+    // Scene-synced mode: show segment text during its scene
+    for (let i = 0; i < sceneRanges.length; i++) {
+      const { start, end } = sceneRanges[i];
+      if (frame >= start && frame < end) {
+        const sentences = scriptSegments[i]
+          .split(/(?<=[.!?。])\s*/)
+          .map(s => s.trim())
+          .filter(Boolean);
+        if (sentences.length === 0) break;
 
-  const opacity = interpolate(sentenceFrame, [0, 8, framesPerSentence - 10, framesPerSentence], [0, 1, 1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+        const sceneDuration = end - start;
+        const framesPerSentence = Math.floor(sceneDuration / sentences.length);
+        const localFrame = frame - start;
+        const sentIdx = Math.min(Math.floor(localFrame / framesPerSentence), sentences.length - 1);
+        const sentFrame = localFrame - sentIdx * framesPerSentence;
 
-  const currentText = sentences[currentIdx];
+        segmentOpacity = interpolate(sentFrame, [0, 8, framesPerSentence - 10, framesPerSentence], [0, 1, 1, 0], {
+          extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+        });
+        currentText = sentences[sentIdx];
+        break;
+      }
+    }
+  } else {
+    // Fallback: evenly distributed across total frames
+    const sentences = script.split(/(?<=[.!?。])\s*/).map(s => s.trim()).filter(Boolean);
+    if (sentences.length === 0) return null;
+    const framesPerSentence = Math.floor(totalFrames / sentences.length);
+    const currentIdx = Math.min(Math.floor(frame / framesPerSentence), sentences.length - 1);
+    const sentenceFrame = frame - currentIdx * framesPerSentence;
+    segmentOpacity = interpolate(sentenceFrame, [0, 8, framesPerSentence - 10, framesPerSentence], [0, 1, 1, 0], {
+      extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
+    });
+    currentText = sentences[currentIdx];
+  }
+
+  if (!currentText || segmentOpacity < 0.01) return null;
 
   return (
     <div style={{
       position: 'absolute',
-      top: 90,
+      bottom: 280,
       left: 40,
       right: 40,
-      opacity,
+      opacity: segmentOpacity,
       pointerEvents: 'none',
       zIndex: 50,
     }}>
@@ -413,6 +447,8 @@ export const StockShort: React.FC<Props> = ({
   chartData = [],
   companyNameKo = '',
   newsHeadlines = [],
+  audioSegments = [],
+  scriptSegments = [],
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -465,7 +501,16 @@ export const StockShort: React.FC<Props> = ({
       overflow: 'hidden',
     }}>
 
-      {audioPath ? (
+      {/* Audio: per-scene segments for sync, or single fallback */}
+      {audioSegments.length === 5 ? (
+        <>
+          <Sequence from={0}><Audio src={staticFile(audioSegments[0])} volume={1} /></Sequence>
+          <Sequence from={fps * 5}><Audio src={staticFile(audioSegments[1])} volume={1} /></Sequence>
+          <Sequence from={fps * 17}><Audio src={staticFile(audioSegments[2])} volume={1} /></Sequence>
+          <Sequence from={fps * 26}><Audio src={staticFile(audioSegments[3])} volume={1} /></Sequence>
+          <Sequence from={fps * 37}><Audio src={staticFile(audioSegments[4])} volume={1} /></Sequence>
+        </>
+      ) : audioPath ? (
         <Audio src={staticFile(audioPath)} volume={1} />
       ) : null}
 
@@ -892,7 +937,13 @@ export const StockShort: React.FC<Props> = ({
 
       {/* Subtitle overlay */}
       {script && (
-        <SubtitleOverlay script={script} frame={frame} totalFrames={fps * 45} />
+        <SubtitleOverlay
+          script={script}
+          frame={frame}
+          fps={fps}
+          totalFrames={fps * 45}
+          scriptSegments={scriptSegments.length === 5 ? scriptSegments : undefined}
+        />
       )}
 
     </AbsoluteFill>

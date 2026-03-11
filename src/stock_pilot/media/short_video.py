@@ -12,17 +12,30 @@ def generate_short_video(
     pkg: ContentPackage,
     output_path: Path,
     audio_path: Path | None = None,
+    audio_segment_paths: list[Path] | None = None,
+    script_segments: list[str] | None = None,
 ) -> bool:
     """Render a short-form video via Remotion CLI. Returns True on success."""
     if not REMOTION_DIR.exists():
         logger.error("Remotion project not found at %s", REMOTION_DIR)
         return False
 
-    # Copy audio to Remotion public dir so staticFile() can access it
+    public_dir = REMOTION_DIR / "public"
+    public_dir.mkdir(exist_ok=True)
+
+    # Copy audio segment files to Remotion public dir
+    audio_segment_names: list[str] = []
+    if audio_segment_paths:
+        for seg_path in audio_segment_paths:
+            if Path(seg_path).exists():
+                dest = public_dir / Path(seg_path).name
+                shutil.copy2(seg_path, dest)
+                audio_segment_names.append(Path(seg_path).name)
+                logger.info("Copied audio segment to remotion/public/%s", dest.name)
+
+    # Fallback: single audio file
     audio_prop = ""
-    if audio_path and Path(audio_path).exists():
-        public_dir = REMOTION_DIR / "public"
-        public_dir.mkdir(exist_ok=True)
+    if not audio_segment_names and audio_path and Path(audio_path).exists():
         dest = public_dir / Path(audio_path).name
         shutil.copy2(audio_path, dest)
         audio_prop = Path(audio_path).name
@@ -48,6 +61,9 @@ def generate_short_video(
         "chartData": pkg.chart_data,
         "companyNameKo": getattr(pkg, "company_name_ko", ""),
         "newsHeadlines": getattr(pkg, "news_headlines", []),
+        # Scene-synced audio and subtitles
+        "audioSegments": audio_segment_names,
+        "scriptSegments": script_segments or [],
     }
 
     cmd = [

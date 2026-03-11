@@ -31,6 +31,8 @@ export const RemotionRoot: React.FC = () => {
         chartData: [148, 149, 147, 150, 152, 151, 153, 150, 148, 150, 152, 154, 153, 155, 154, 156, 155, 157, 156, 158],
         companyNameKo: '애플',
         newsHeadlines: ['아이폰 16 판매 호조로 실적 기대감 상승', '워런 버핏 애플 지분 추가 매수 소식'],
+        audioSegments: [],
+        scriptSegments: [],
       }}
     />
   );
