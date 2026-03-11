@@ -1,0 +1,213 @@
+# Stock Pilot
+
+Automated US stock analysis and short-form video content pipeline for Instagram Reels. Selects the hottest stock of the day, generates quant-driven analysis, and produces a 30-second narrated video — all fully automated.
+
+## Features
+
+- **Hot Stock Selection** — Scans 40+ US stocks (S&P 500, tech, fintech, biotech) by combining price change % and volume spike ratio into a composite "hot score"
+- **Technical Analysis** — RSI, MACD, Bollinger Bands, SMA 5/20/60, EMA 9/21/50, pivot points, trendline fitting, support/resistance
+- **AI Content Generation** — Claude API generates analysis text, narration script, and captions with quant perspective
+- **Card News** — Puppeteer-rendered infographic images
+- **Short-Form Video** — 30-second Remotion-rendered video with animated chart, quant gauge, motion graphics, and TTS narration
+- **Instagram Reels Upload** — Automated upload via Instagram Graph API (system user permanent token)
+- **News Aggregation** — Finnhub, Alpha Vantage, SEC EDGAR, Yahoo Finance RSS
+
+## Architecture
+
+```
+Hot Stock Selection (yfinance)
+        │
+        ├── Quant Analysis (pandas-ta)
+        │       RSI · MACD · Bollinger · SMA/EMA · Pivot · Trendline
+        │
+        ├── News Collection (Finnhub, Alpha Vantage, SEC, Yahoo RSS)
+        │       Sentiment analysis
+        │
+        └── AI Content Generation (Claude API)
+                │
+                ├── Card News (Puppeteer)
+                ├── TTS Narration (edge-tts / ElevenLabs)
+                └── 30s Video (Remotion)
+                        │
+                        └── Instagram Reels Upload (Graph API)
+```
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.12+
+- Node.js 18+ (for Remotion video rendering)
+- Chromium (for Puppeteer card news)
+
+### Installation
+
+```bash
+git clone https://github.com/wonnx/stock-pilot.git
+cd stock-pilot
+
+# Python dependencies
+python -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+# Remotion dependencies
+cd remotion && npm install && cd ..
+```
+
+### Configuration
+
+Copy `.env.example` to `.env` and fill in:
+
+```bash
+cp .env.example .env
+```
+
+**Required:**
+| Variable | Description |
+|---|---|
+| `ANTHROPIC_API_KEY` | Claude API key for content generation |
+| `INSTAGRAM_ACCESS_TOKEN` | Facebook system user permanent token |
+| `INSTAGRAM_USER_ID` | Instagram business account ID |
+
+**Optional:**
+| Variable | Description |
+|---|---|
+| `FINNHUB_API_KEY` | Finnhub news API |
+| `ALPHA_VANTAGE_API_KEY` | Alpha Vantage data API |
+| `KAKAO_ACCESS_TOKEN` | KakaoTalk alert token |
+| `ELEVENLABS_API_KEY` | ElevenLabs TTS (defaults to edge-tts) |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 |
+
+## Usage
+
+### Generate content for the hottest stock
+
+```bash
+# Dry run (generate only, no upload)
+stock-pilot content --hot --dry-run
+
+# Generate and upload to Instagram Reels
+stock-pilot content --hot --upload
+```
+
+### Generate content for specific symbols
+
+```bash
+stock-pilot content NVDA TSLA --upload
+```
+
+### Market scan
+
+```bash
+# Scan watchlist for trade signals
+stock-pilot scan
+
+# Dry run (no alerts)
+stock-pilot scan --dry-run
+```
+
+### Backtest
+
+```bash
+# Backtest all watchlist symbols
+stock-pilot backtest
+
+# Backtest a single symbol
+stock-pilot backtest NVDA
+```
+
+### Watchlist management
+
+```bash
+stock-pilot watchlist                    # Show current watchlist
+stock-pilot watchlist --add SOFI PLTR    # Add symbols
+stock-pilot watchlist --remove INTC      # Remove symbols
+```
+
+### Scheduled posting (cron)
+
+Set up a daily cron job to auto-post the hottest stock at market close:
+
+```bash
+# Edit crontab
+crontab -e
+
+# Add this line (runs daily at 5:00 PM EST / 6:00 AM KST next day)
+0 17 * * 1-5 cd /Users/jwkim/stock-pilot && /Users/jwkim/stock-pilot/.venv/bin/stock-pilot content --hot --upload >> /Users/jwkim/stock-pilot/output/cron.log 2>&1
+```
+
+This runs every weekday (Mon-Fri) at 5:00 PM, which is after US market close (4:00 PM EST). It:
+1. Selects the hottest stock by volume spike + price change
+2. Runs quant analysis (RSI, MACD, Bollinger, etc.)
+3. Generates AI narration and 30s video
+4. Uploads to Instagram Reels (@stock.snap)
+
+## Project Structure
+
+```
+stock-pilot/
+├── src/stock_pilot/
+│   ├── cli.py                 # CLI entry point
+│   ├── hot_stock.py           # Hot stock selection (volume + price scoring)
+│   ├── scanner.py             # Market scanner
+│   ├── analysis/
+│   │   └── indicators.py      # Technical indicators (RSI, MACD, BB, SMA, pivot, trendline)
+│   ├── content/
+│   │   ├── generator.py       # AI content generation (Claude API)
+│   │   └── pipeline.py        # Full pipeline orchestrator
+│   ├── data/
+│   │   ├── fetcher.py         # yfinance data fetcher
+│   │   └── watchlist.py       # Watchlist management
+│   ├── media/
+│   │   ├── card_news.py       # Puppeteer card news generator
+│   │   ├── short_video.py     # Remotion video renderer
+│   │   └── tts.py             # TTS (edge-tts / ElevenLabs)
+│   ├── news/
+│   │   ├── collector.py       # Multi-source news aggregation
+│   │   └── sentiment.py       # Sentiment analysis
+│   ├── upload/
+│   │   ├── instagram.py       # Instagram Graph API (photo + Reels)
+│   │   └── youtube.py         # YouTube Shorts upload
+│   ├── alerts/
+│   │   ├── kakao.py           # KakaoTalk alerts
+│   │   └── telegram.py        # Telegram alerts
+│   ├── signals/
+│   │   └── scorer.py          # Trade signal scoring
+│   ├── backtest/
+│   │   └── engine.py          # Backtesting engine
+│   └── utils/
+│       └── config.py          # Environment config loader
+├── remotion/                   # Remotion video templates
+│   └── src/
+│       ├── Root.tsx
+│       └── StockShort.tsx     # 30s short-form video template
+├── tests/                     # Test suite
+├── output/                    # Generated content output
+├── pyproject.toml
+└── .env.example
+```
+
+## Technical Indicators
+
+| Indicator | Description | Usage |
+|---|---|---|
+| RSI (14) | Relative Strength Index | Overbought (>70) / Oversold (<30) |
+| MACD (12/26/9) | Moving Average Convergence Divergence | Trend momentum |
+| Bollinger Bands (20, 2σ) | Volatility bands | Squeeze detection, band position |
+| SMA 5/20/60 | Simple Moving Averages | Trend alignment, golden cross |
+| EMA 9/21/50 | Exponential Moving Averages | Short-term trend |
+| Pivot Points | Classic H/L/C pivot | Support/Resistance levels |
+| Trendline | 20-day linear regression | Trend direction and strength (R²) |
+| Volume Ratio | Current vs 20-day avg volume | Volume spike detection (>2x) |
+
+## Testing
+
+```bash
+pytest
+pytest --cov=stock_pilot
+```
+
+## License
+
+Private — © 2026 wonnx
