@@ -147,6 +147,8 @@ def run():
 
     rsi_label_ko = "과매수" if rsi >= 70 else ("과매도" if rsi <= 30 else "중립")
     macd_label_ko = "골든크로스" if macd > macd_signal else "데드크로스"
+    bb_label_ko = "상단 돌파" if bb_pos == "upper" else ("하단 지지" if bb_pos == "lower" else "중간대")
+    ema_label_ko = "상승추세" if ema == "bullish" else ("하락추세" if ema == "bearish" else "혼조")
 
     display_name = f"{company_name_ko}({symbol})" if company_name_ko else symbol
     card_title = f"{display_name} {arrow}{abs(change_pct):.1f}% {'급등' if change_pct > 0 else '급락'}"
@@ -159,39 +161,53 @@ def run():
 
     tts_name = company_name_ko if company_name_ko else symbol
 
-    # Build TTS script segments per scene (for audio-visual sync)
-    # S1 Hero (0-5s), S2 News (5-17s), S3 Chart (17-26s), S4 Indicators (26-37s), S5 Conclusion (37-45s)
-    seg_hero = f"오늘 {tts_name}이 {abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}했습니다."
+    # Build TTS script segments — each reads exactly what's shown on screen
+    # S1 Hero (0-5s): reads stock name, price, change%
+    seg_hero = (
+        f"{tts_name}, {symbol}. "
+        f"현재가 {price:,.2f}달러. "
+        f"{abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}."
+    )
 
-    # News segment — use translated Korean headlines
+    # S2 News (5-17s): reads the news headlines shown on screen
     if news_headlines:
-        first_news = news_headlines[0].split("\n")[0]
-        seg_news = f"주요 뉴스를 보면, {first_news}."
-        if len(news_headlines) > 1:
-            second_news = news_headlines[1].split("\n")[0]
-            seg_news += f" 또한, {second_news}."
+        news_parts = []
+        for i, h in enumerate(news_headlines[:3]):
+            title = h.split("\n")[0]
+            detail = h.split("\n")[1] if "\n" in h else ""
+            news_parts.append(f"{i+1}번. {title}.")
+            if detail:
+                news_parts.append(detail[:80])
+        seg_news = f"{'급등' if change_pct > 0 else '급락'} 배경. " + " ".join(news_parts)
     else:
         seg_news = f"{'시장 전반의 매수세가 주요 요인으로 분석됩니다.' if change_pct > 0 else '시장 전반의 매도 압력이 주요 원인으로 분석됩니다.'}"
 
-    # Chart segment
+    # S3 Chart (17-26s): reads chart interpretation shown on screen
     if chart_data and len(chart_data) >= 2:
         pct_20d = ((chart_data[-1] / chart_data[0]) - 1) * 100
-        trend_word = "상승" if pct_20d > 0 else "하락"
-        seg_chart = f"차트를 보면, 최근 20거래일간 {abs(pct_20d):.1f}퍼센트 {trend_word}했습니다. {'상승 모멘텀이 강합니다.' if pct_20d > 5 else '지지선 확인이 필요합니다.' if pct_20d < -5 else '횡보 구간입니다.'}"
+        trend = "강한 상승추세" if pct_20d > 5 else "완만한 상승" if pct_20d > 0 else "완만한 하락" if pct_20d > -5 else "급격한 하락"
+        seg_chart = (
+            f"가격 추이, 최근 20거래일. "
+            f"20일 전 {chart_data[0]:.2f}달러에서 현재 {chart_data[-1]:.2f}달러. "
+            f"{trend}, {abs(pct_20d):.1f}퍼센트 {'상승' if pct_20d > 0 else '하락'}."
+        )
     else:
         seg_chart = "최근 20거래일 차트를 분석합니다."
 
-    # Indicators segment
+    # S4 Indicators (26-37s): reads indicator values shown on screen
     seg_indicators = (
-        f"기술적 분석을 보면, RSI는 {rsi:.0f}으로 {rsi_label_ko} 구간이고, "
-        f"MACD는 {macd_label_ko}를 보이고 있습니다. "
-        f"거래량은 20일 평균 대비 {vol_ratio:.1f}배입니다."
+        f"기술적 분석, 핵심 지표. "
+        f"RSI {rsi:.0f}, {rsi_label_ko}. "
+        f"MACD {macd_label_ko}. "
+        f"볼린저밴드 {bb_label_ko}. "
+        f"거래량 {vol_ratio:.1f}배."
     )
 
-    # Conclusion segment
+    # S5 Conclusion (37-45s): reads the conclusion card
     seg_conclusion = (
-        f"{'이번 하락이 매수 기회가 될지 주목됩니다.' if change_pct < 0 else '이 상승세가 지속될지 주목됩니다.'} "
-        f"본 콘텐츠는 투자 조언이 아닙니다."
+        f"오늘의 분석. {card_title}. "
+        f"{card_subtitle}. "
+        f"스톡스냅 팔로우하고 매일 분석 받으세요."
     )
 
     script_segments = [seg_hero, seg_news, seg_chart, seg_indicators, seg_conclusion]
@@ -203,9 +219,6 @@ def run():
         else ("RSI 과매수 영역 — 조정 가능성에 유의하세요." if rsi >= 65
               else "RSI 중립 — 추세 지속 가능성이 높습니다.")
     )
-
-    bb_label_ko = "상단 돌파" if bb_pos == "upper" else ("하단 지지" if bb_pos == "lower" else "중간대")
-    ema_label_ko = "상승추세" if ema == "bullish" else ("하락추세" if ema == "bearish" else "혼조")
 
     from datetime import datetime
     import pytz
