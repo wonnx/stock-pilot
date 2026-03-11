@@ -130,9 +130,16 @@ def run():
     bb_label_ko = "상단 돌파" if bb_pos == "upper" else ("하단 지지" if bb_pos == "lower" else "중간대")
     ema_label_ko = "상승추세" if ema == "bullish" else ("하락추세" if ema == "bearish" else "혼조")
 
+    from datetime import datetime
+    import pytz
+    et = pytz.timezone("US/Eastern")
+    now_et = datetime.now(et)
+    time_label = now_et.strftime("%Y년 %m월 %d일 %H:%M") + " (미국 동부시간) 기준"
+
     caption = (
         f"${display_name} {arrow}{abs(change_pct):.1f}% "
         f"{'급락' if change_pct < 0 else '급등'}!\n\n"
+        f"[분석 기준] {time_label}\n\n"
         f"[기술적 분석]\n"
         f"- 현재가: ${price:,.2f} ({sign}{abs(change_pct):.2f}%)\n"
         f"- RSI {rsi:.0f} ({rsi_label_ko}) | MACD: {macd_label_ko}\n"
