@@ -26,7 +26,7 @@ def cmd_scan(args: argparse.Namespace) -> None:
     from stock_pilot.scanner import Scanner
 
     scanner = Scanner(skip_news=args.no_news)
-    console.print("[bold blue]📡 Stock Pilot — 시장 스캔 시작...[/bold blue]")
+    console.print("[bold blue]Stock Pilot — Starting market scan...[/bold blue]")
     result = scanner.run_sync(send_alerts=not args.dry_run)
 
     table = Table(title="Trade Signals", show_header=True)
@@ -52,9 +52,9 @@ def cmd_scan(args: argparse.Namespace) -> None:
 
     console.print(table)
     if result.errors:
-        console.print(f"[red]오류 {len(result.errors)}건:[/red] {', '.join(result.errors)}")
+        console.print(f"[red]{len(result.errors)} error(s):[/red] {', '.join(result.errors)}")
     if not args.dry_run:
-        console.print(f"[green]알림 전송: {result.alerts_sent}건[/green]")
+        console.print(f"[green]Alerts sent: {result.alerts_sent}[/green]")
 
 
 def cmd_backtest(args: argparse.Namespace) -> None:
@@ -66,7 +66,7 @@ def cmd_backtest(args: argparse.Namespace) -> None:
     bt = BacktestEngine()
     symbols = [args.symbol.upper()] if args.symbol else watchlist.symbols
 
-    console.print(f"[bold blue]📊 백테스트 실행: {len(symbols)}개 종목[/bold blue]")
+    console.print(f"[bold blue]Running backtest: {len(symbols)} symbol(s)[/bold blue]")
 
     table = Table(title="Backtest Results (1Y)")
     table.add_column("Symbol")
@@ -101,15 +101,15 @@ def cmd_watchlist(args: argparse.Namespace) -> None:
     if args.add:
         for sym in args.add:
             watchlist.add(sym)
-            console.print(f"[green]추가: {sym.upper()}[/green]")
+            console.print(f"[green]Added: {sym.upper()}[/green]")
     elif args.remove:
         for sym in args.remove:
             watchlist.remove(sym)
-            console.print(f"[red]제거: {sym.upper()}[/red]")
+            console.print(f"[red]Removed: {sym.upper()}[/red]")
     else:
-        console.print("[bold]현재 Watchlist:[/bold]")
+        console.print("[bold]Current Watchlist:[/bold]")
         for sym in watchlist.symbols:
-            console.print(f"  • {sym}")
+            console.print(f"  - {sym}")
 
 
 def cmd_content(args: argparse.Namespace) -> None:
@@ -121,24 +121,24 @@ def cmd_content(args: argparse.Namespace) -> None:
     upload = args.upload and not args.dry_run
 
     if args.hot:
-        # 핫 주식 자동 선정 모드
-        console.print("[bold blue]🔥 핫 주식 자동 선정 중...[/bold blue]")
+        # Hot stock auto-selection mode
+        console.print("[bold blue]Selecting hottest stock...[/bold blue]")
         r = pipeline.run_hot_stock(upload=upload)
         results = [r] if r else []
     elif args.symbols:
         symbols = [s.upper() for s in args.symbols]
-        console.print(f"[bold blue]🎬 숏폼 콘텐츠 생성: {symbols}[/bold blue]")
+        console.print(f"[bold blue]Generating short-form content: {symbols}[/bold blue]")
         results = pipeline.run_for_symbols(symbols, upload=upload)
     else:
-        console.print("[bold blue]📡 시그널 스캔 중...[/bold blue]")
+        console.print("[bold blue]Scanning for signals...[/bold blue]")
         scanner = Scanner(skip_news=False)
         scan_result = scanner.run_sync(send_alerts=False)
         actionable = [s for s in scan_result.signals if s.is_actionable]
         symbols = [s.symbol for s in actionable[: args.top_n]]
         if not symbols:
-            console.print("[yellow]오늘 액션 가능한 시그널 없음[/yellow]")
+            console.print("[yellow]No actionable signals today[/yellow]")
             return
-        console.print(f"[bold blue]🎬 숏폼 콘텐츠 생성: {symbols}[/bold blue]")
+        console.print(f"[bold blue]Generating short-form content: {symbols}[/bold blue]")
         results = pipeline.run_for_symbols(symbols, upload=upload)
 
     table = Table(title="Content Pipeline Results")
@@ -174,7 +174,7 @@ def cmd_schedule(args: argparse.Namespace) -> None:
     interval = args.interval or config.SCAN_INTERVAL_MINUTES
     scanner = Scanner(skip_news=args.no_news)
 
-    console.print(f"[bold blue]⏰ 스케줄러 시작 — {interval}분마다 스캔[/bold blue]")
+    console.print(f"[bold blue]Scheduler started — scanning every {interval} min[/bold blue]")
 
     scheduler = BlockingScheduler()
     scheduler.add_job(
@@ -187,49 +187,49 @@ def cmd_schedule(args: argparse.Namespace) -> None:
     try:
         scheduler.start()
     except KeyboardInterrupt:
-        console.print("[yellow]스케줄러 종료[/yellow]")
+        console.print("[yellow]Scheduler stopped[/yellow]")
         sys.exit(0)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="stock-pilot",
-        description="미국 주식 분석 및 알림 서비스",
+        description="US stock analysis and alert service",
     )
     parser.add_argument("-v", "--verbose", action="store_true")
     sub = parser.add_subparsers(dest="command", required=True)
 
     # scan
-    scan_p = sub.add_parser("scan", help="시장 스캔 실행")
-    scan_p.add_argument("--dry-run", action="store_true", help="알림 미발송")
-    scan_p.add_argument("--no-news", action="store_true", help="뉴스 분석 스킵")
+    scan_p = sub.add_parser("scan", help="Run market scan")
+    scan_p.add_argument("--dry-run", action="store_true", help="Skip sending alerts")
+    scan_p.add_argument("--no-news", action="store_true", help="Skip news analysis")
     scan_p.set_defaults(func=cmd_scan)
 
     # backtest
-    bt_p = sub.add_parser("backtest", help="백테스트 실행")
-    bt_p.add_argument("symbol", nargs="?", help="종목 코드 (없으면 전체)")
+    bt_p = sub.add_parser("backtest", help="Run backtest")
+    bt_p.add_argument("symbol", nargs="?", help="Symbol (omit for all watchlist)")
     bt_p.set_defaults(func=cmd_backtest)
 
     # watchlist
-    wl_p = sub.add_parser("watchlist", help="Watchlist 관리")
+    wl_p = sub.add_parser("watchlist", help="Manage watchlist")
     wl_p.add_argument("--add", nargs="+", metavar="SYMBOL")
     wl_p.add_argument("--remove", nargs="+", metavar="SYMBOL")
     wl_p.set_defaults(func=cmd_watchlist)
 
     # schedule
-    sched_p = sub.add_parser("schedule", help="주기적 스캔 시작")
-    sched_p.add_argument("--interval", type=int, help="분 단위 간격 (기본: 15)")
+    sched_p = sub.add_parser("schedule", help="Start periodic scan")
+    sched_p.add_argument("--interval", type=int, help="Interval in minutes (default: 15)")
     sched_p.add_argument("--no-news", action="store_true")
     sched_p.set_defaults(func=cmd_schedule)
 
     # content
-    content_p = sub.add_parser("content", help="숏폼 콘텐츠 생성")
-    content_p.add_argument("symbols", nargs="*", help="종목 코드 (없으면 상위 시그널 종목)")
-    content_p.add_argument("--hot", action="store_true", help="핫 주식 자동 선정 후 파이프라인 실행")
-    content_p.add_argument("--upload", action="store_true", help="Instagram Reels/YouTube 자동 업로드")
-    content_p.add_argument("--dry-run", action="store_true", help="생성만, 업로드 안 함")
-    content_p.add_argument("--output-dir", default="output", help="출력 디렉토리")
-    content_p.add_argument("--top-n", type=int, default=3, help="상위 N개 종목")
+    content_p = sub.add_parser("content", help="Generate short-form content")
+    content_p.add_argument("symbols", nargs="*", help="Symbols (omit for top signal stocks)")
+    content_p.add_argument("--hot", action="store_true", help="Auto-select hottest stock")
+    content_p.add_argument("--upload", action="store_true", help="Auto-upload to Instagram Reels/YouTube")
+    content_p.add_argument("--dry-run", action="store_true", help="Generate only, no upload")
+    content_p.add_argument("--output-dir", default="output", help="Output directory")
+    content_p.add_argument("--top-n", type=int, default=3, help="Top N symbols")
     content_p.set_defaults(func=cmd_content)
 
     args = parser.parse_args()

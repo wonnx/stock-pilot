@@ -1,4 +1,4 @@
-"""Full content generation pipeline: 핫 주식 선정 → 퀀트 분석 → 콘텐츠 → 미디어 → Instagram Reels 업로드."""
+"""Full content generation pipeline: hot stock selection -> quant analysis -> content -> media -> Instagram Reels upload."""
 from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 def _upload_to_catbox(file_path: Path, mime: str = "image/png") -> str | None:
-    """catbox.moe에 파일을 업로드하여 공개 URL 반환."""
+    """Upload file to catbox.moe and return a public URL."""
     try:
         with open(file_path, "rb") as f:
             resp = httpx.post(
@@ -25,12 +25,12 @@ def _upload_to_catbox(file_path: Path, mime: str = "image/png") -> str | None:
             logger.info("catbox URL: %s", url)
             return url
     except Exception as e:
-        logger.warning("catbox.moe 실패: %s", e)
+        logger.warning("catbox.moe failed: %s", e)
     return None
 
 
 def _upload_to_litterbox(file_path: Path, mime: str = "video/mp4", hours: str = "24h") -> str | None:
-    """litterbox.catbox.moe에 파일을 임시 업로드 (기본 24시간 유효)."""
+    """Upload file to litterbox.catbox.moe temporarily (default 24h)."""
     try:
         with open(file_path, "rb") as f:
             resp = httpx.post(
@@ -45,7 +45,7 @@ def _upload_to_litterbox(file_path: Path, mime: str = "video/mp4", hours: str = 
             logger.info("litterbox URL (%s): %s", hours, url)
             return url
     except Exception as e:
-        logger.warning("litterbox 실패: %s", e)
+        logger.warning("litterbox failed: %s", e)
     return None
 
 
@@ -59,10 +59,10 @@ class PipelineResult:
     instagram_reel_ok: bool = False
     youtube_ok: bool = False
     errors: list[str] = field(default_factory=list)
-    # 생성된 파일 경로
+    # Generated file paths
     card_path: Path | None = None
     video_path: Path | None = None
-    # 업로드 URL
+    # Upload URLs
     video_public_url: str | None = None
 
 
@@ -75,19 +75,19 @@ class ContentPipeline:
 
     def run_hot_stock(self, upload: bool = False) -> "PipelineResult | None":
         """
-        핫 주식을 자동 선정하여 전체 파이프라인을 실행한다.
+        Auto-select the hottest stock and run the full pipeline.
 
         Returns:
-            PipelineResult or None (핫 주식 선정 실패 시)
+            PipelineResult or None if hot stock selection fails.
         """
         from stock_pilot.hot_stock import select_hot_stock
 
         hot = select_hot_stock()
         if not hot:
-            logger.error("핫 주식 선정 실패")
+            logger.error("Hot stock selection failed")
             return None
 
-        logger.info("핫 주식: %s (%+.2f%%, 거래량 %.1fx)", hot.symbol, hot.change_pct, hot.volume_ratio)
+        logger.info("Hot stock: %s (%+.2f%%, vol %.1fx)", hot.symbol, hot.change_pct, hot.volume_ratio)
         return self.run_for_symbol(hot.symbol, upload=upload, hot_volume_ratio=hot.volume_ratio)
 
     def run_for_symbol(
@@ -107,7 +107,7 @@ class ContentPipeline:
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # 1. 실시간 가격
+        # 1. Real-time price
         try:
             quote = fetcher.get_realtime_quote(symbol)
             price = float(quote.get("price", 0))
@@ -116,7 +116,7 @@ class ContentPipeline:
             result.errors.append(f"Price fetch failed: {e}")
             return result
 
-        # 2. 퀀트 분석 + 차트 데이터 (최근 20일 종가)
+        # 2. Quant analysis + chart data (last 20 days close)
         tech = None
         chart_data: list[float] = []
         try:
@@ -128,18 +128,18 @@ class ContentPipeline:
         except Exception as e:
             result.errors.append(f"Technical analysis: {e}")
 
-        # hot_stock에서 계산된 거래량 비율이 있으면 반영
+        # Apply volume ratio from hot_stock if available
         if hot_volume_ratio is not None and tech is not None:
             tech.volume = tech.volume_sma20 * hot_volume_ratio
 
-        # 3. 뉴스 수집
+        # 3. News collection
         try:
             collector = NewsCollector(lookback_hours=24)
             news_items = collector.fetch_for_symbol(symbol, max_items=8)
         except Exception:
             news_items = []
 
-        # 4. 감성 분석
+        # 4. Sentiment analysis
         sentiment_summary = ""
         try:
             sent_analyzer = SentimentAnalyzer()
@@ -149,7 +149,7 @@ class ContentPipeline:
         except Exception:
             pass
 
-        # 5. AI 콘텐츠 생성 (퀀트 데이터 포함)
+        # 5. AI content generation (with quant data)
         pkg = generator.generate(
             symbol, price, prev_close,
             news_items, sentiment_summary,
@@ -161,7 +161,7 @@ class ContentPipeline:
             return result
         result.content_ok = True
 
-        # 6. 카드뉴스 이미지
+        # 6. Card news image
         card_path = self._out / f"{symbol}_{ts}_card.png"
         try:
             from stock_pilot.media.card_news import generate_card_news
@@ -179,7 +179,7 @@ class ContentPipeline:
         except Exception as e:
             result.errors.append(f"TTS: {e}")
 
-        # 8. 30초 숏폼 영상 (Remotion)
+        # 8. 30-second short-form video (Remotion)
         video_path = self._out / f"{symbol}_{ts}_reel.mp4"
         try:
             from stock_pilot.media.short_video import generate_short_video
@@ -190,16 +190,16 @@ class ContentPipeline:
         except Exception as e:
             result.errors.append(f"Video: {e}")
 
-        # 9. 업로드
+        # 9. Upload
         if upload:
-            # Instagram Reels 업로드 (영상 우선)
+            # Instagram Reels upload (video first)
             if result.video_ok and result.video_path:
                 try:
                     from stock_pilot.upload.instagram import instagram
-                    # catbox.moe에 영상 공개 업로드 시도
+                    # Try uploading video to catbox.moe for public URL
                     video_url = _upload_to_catbox(result.video_path, mime="video/mp4")
                     if not video_url:
-                        # fallback: litterbox (24h 임시)
+                        # Fallback: litterbox (24h temporary)
                         video_url = _upload_to_litterbox(result.video_path)
 
                     if video_url:
@@ -209,15 +209,15 @@ class ContentPipeline:
                             caption=pkg.caption,
                         )
                     else:
-                        result.errors.append("Instagram Reel: 영상 임시 호스팅 실패")
+                        result.errors.append("Instagram Reel: video temporary hosting failed")
                 except Exception as e:
                     result.errors.append(f"Instagram Reel: {e}")
 
-            # YouTube Shorts 업로드
+            # YouTube Shorts upload
             if result.video_ok and result.video_path:
                 try:
                     from stock_pilot.upload.youtube import youtube
-                    tags = [symbol, "주식", "미국주식", "숏폼", "YouTubeShorts", "퀀트"]
+                    tags = [symbol, "stocks", "USstocks", "shorts", "YouTubeShorts", "quant"]
                     vid_id = youtube.upload_short(result.video_path, pkg.card_title, pkg.caption, tags)
                     result.youtube_ok = vid_id is not None
                 except Exception as e:

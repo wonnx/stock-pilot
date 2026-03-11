@@ -1,7 +1,7 @@
 """Instagram Graph API upload."""
 from __future__ import annotations
 import logging
-from pathlib import Path
+import time
 import httpx
 from stock_pilot.utils.config import config
 
@@ -51,6 +51,27 @@ class InstagramUploader:
             logger.error("Instagram photo upload failed: %s", e)
             return False
 
+    def _wait_for_container(self, container_id: str, timeout: int = 120) -> bool:
+        """Poll until Reels container processing completes. Returns True on FINISHED."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            resp = httpx.get(
+                f"{IG_API_BASE}/{container_id}",
+                params={"fields": "status_code", "access_token": self._token},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            status = resp.json().get("status_code", "")
+            logger.info("Container %s status: %s", container_id, status)
+            if status == "FINISHED":
+                return True
+            if status == "ERROR":
+                logger.error("Container processing error")
+                return False
+            time.sleep(5)
+        logger.error("Container processing timed out after %ds", timeout)
+        return False
+
     def upload_reel(self, video_url: str, caption: str, cover_url: str = "") -> bool:
         """Upload a Reel (short video)."""
         if not self._check_config():
@@ -65,6 +86,7 @@ class InstagramUploader:
             if cover_url:
                 payload["cover_url"] = cover_url
 
+            # Step 1: Create container
             resp = httpx.post(
                 f"{IG_API_BASE}/{self._ig_user_id}/media",
                 params={"access_token": self._token},
@@ -73,7 +95,14 @@ class InstagramUploader:
             )
             resp.raise_for_status()
             container_id = resp.json()["id"]
+            logger.info("Reel container created: %s", container_id)
 
+            # Step 2: Wait for video processing to finish
+            if not self._wait_for_container(container_id):
+                logger.error("Reel container did not finish processing")
+                return False
+
+            # Step 3: Publish
             pub = httpx.post(
                 f"{IG_API_BASE}/{self._ig_user_id}/media_publish",
                 params={"access_token": self._token},
