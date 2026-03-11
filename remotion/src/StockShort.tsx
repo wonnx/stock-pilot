@@ -501,14 +501,14 @@ export const StockShort: React.FC<Props> = ({
       overflow: 'hidden',
     }}>
 
-      {/* Audio: per-scene segments for sync, or single fallback */}
+      {/* Audio: per-scene segments with duration limits to prevent overlap */}
       {audioSegments.length === 5 ? (
         <>
-          <Sequence from={0}><Audio src={staticFile(audioSegments[0])} volume={1} /></Sequence>
-          <Sequence from={fps * 5}><Audio src={staticFile(audioSegments[1])} volume={1} /></Sequence>
-          <Sequence from={fps * 17}><Audio src={staticFile(audioSegments[2])} volume={1} /></Sequence>
-          <Sequence from={fps * 26}><Audio src={staticFile(audioSegments[3])} volume={1} /></Sequence>
-          <Sequence from={fps * 37}><Audio src={staticFile(audioSegments[4])} volume={1} /></Sequence>
+          <Sequence from={0} durationInFrames={Math.round(fps * 5)}><Audio src={staticFile(audioSegments[0])} volume={1} /></Sequence>
+          <Sequence from={Math.round(fps * 5)} durationInFrames={Math.round(fps * 12)}><Audio src={staticFile(audioSegments[1])} volume={1} /></Sequence>
+          <Sequence from={Math.round(fps * 17)} durationInFrames={Math.round(fps * 9)}><Audio src={staticFile(audioSegments[2])} volume={1} /></Sequence>
+          <Sequence from={Math.round(fps * 26)} durationInFrames={Math.round(fps * 11)}><Audio src={staticFile(audioSegments[3])} volume={1} /></Sequence>
+          <Sequence from={Math.round(fps * 37)} durationInFrames={Math.round(fps * 8)}><Audio src={staticFile(audioSegments[4])} volume={1} /></Sequence>
         </>
       ) : audioPath ? (
         <Audio src={staticFile(audioPath)} volume={1} />
