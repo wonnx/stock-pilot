@@ -27,10 +27,10 @@ interface Props {
   bbPosition?: string;      // "upper" | "middle" | "lower"
   emaTrend?: string;        // "bullish" | "bearish" | "mixed"
   quantSummary?: string;
-  chartData?: number[];     // 최근 20일 종가
+  chartData?: number[];     // last 20 days close
 }
 
-// ─── 색상 팔레트 ────────────────────────────────────────────────────────────
+// ─── Color palette ────────────────────────────────────────────────────────────
 const BG = '#080c18';
 const SURFACE = '#0f1623';
 const SURFACE2 = '#141d2e';
@@ -43,7 +43,7 @@ const GRAY = '#4a5a7a';
 const WHITE = '#f0f4ff';
 const DIM = '#8896b0';
 
-// ─── 헬퍼: 부드러운 카운트업 ────────────────────────────────────────────────
+// ─── Helper: smooth count-up ────────────────────────────────────────────────
 const countUp = (
   frame: number,
   startFrame: number,
@@ -58,7 +58,7 @@ const countUp = (
   });
 };
 
-// ─── 헬퍼: SVG smooth cubic bezier path ────────────────────────────────────
+// ─── Helper: SVG smooth cubic bezier path ────────────────────────────────────
 const smoothPath = (pts: [number, number][]): string => {
   if (pts.length < 2) return '';
   let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
@@ -71,7 +71,7 @@ const smoothPath = (pts: [number, number][]): string => {
   return d;
 };
 
-// ─── 미니 차트 컴포넌트 ──────────────────────────────────────────────────────
+// ─── Mini chart component ──────────────────────────────────────────────────────
 const AdvancedChart: React.FC<{
   data: number[];
   frame: number;
@@ -94,21 +94,21 @@ const AdvancedChart: React.FC<{
     pad.top + innerH - ((v - min) / range) * innerH,
   ]);
 
-  // 애니메이션 진행도 (0→1)
+  // Animation progress (0→1)
   const progress = interpolate(frame, [0, 50], [0, 1], {
     extrapolateRight: 'clamp',
     easing: Easing.inOut(Easing.quad),
   });
   const clipW = progress * (innerW + pad.left + pad.right);
 
-  // 마지막 표시 포인트
+  // Last visible point
   const lastVisibleIdx = Math.min(
     Math.floor(progress * (data.length - 1)),
     data.length - 1,
   );
   const lastPt = pts[lastVisibleIdx] ?? pts[pts.length - 1];
 
-  // 그리드 가격 레이블
+  // Grid price labels
   const gridLevels = [0, 0.25, 0.5, 0.75, 1];
   const linePath = smoothPath(pts);
   const areaPath = `${linePath} L ${pts[pts.length - 1][0].toFixed(1)} ${(pad.top + innerH).toFixed(1)} L ${pad.left.toFixed(1)} ${(pad.top + innerH).toFixed(1)} Z`;
@@ -139,7 +139,7 @@ const AdvancedChart: React.FC<{
         </filter>
       </defs>
 
-      {/* 그리드 라인 & 가격 레이블 */}
+      {/* Grid lines & price labels */}
       {gridLevels.map((v) => {
         const y = pad.top + innerH * (1 - v);
         const price = min + range * v;
@@ -161,7 +161,7 @@ const AdvancedChart: React.FC<{
         );
       })}
 
-      {/* X축 날짜 (5일 간격) */}
+      {/* X-axis dates (5-day intervals) */}
       {[0, 4, 9, 14, 19].filter(i => i < data.length).map((i) => (
         <text
           key={i}
@@ -173,10 +173,10 @@ const AdvancedChart: React.FC<{
         </text>
       ))}
 
-      {/* 영역 그라디언트 */}
+      {/* Area gradient */}
       <path d={areaPath} fill="url(#chartAreaGrad)" clipPath="url(#chartClip)" />
 
-      {/* 차트 라인 (글로우) */}
+      {/* Chart line (glow) */}
       <path
         d={linePath}
         fill="none"
@@ -196,7 +196,7 @@ const AdvancedChart: React.FC<{
         clipPath="url(#chartClip)"
       />
 
-      {/* 현재 가격 마커 */}
+      {/* Current price marker */}
       {progress > 0.1 && (
         <>
           <circle cx={lastPt[0]} cy={lastPt[1]} r={10} fill={color} fillOpacity={0.2} filter="url(#dotGlow)" />
@@ -208,13 +208,13 @@ const AdvancedChart: React.FC<{
   );
 };
 
-// ─── RSI 게이지 ──────────────────────────────────────────────────────────────
+// ─── RSI gauge ──────────────────────────────────────────────────────────────
 const RsiGauge: React.FC<{ rsi: number; animatedRsi: number }> = ({ rsi, animatedRsi }) => {
   const color = rsi >= 70 ? RED : rsi <= 30 ? GREEN : YELLOW;
-  const label = rsi >= 70 ? '과매수 구간' : rsi <= 30 ? '과매도 구간' : '중립 구간';
+  const label = rsi >= 70 ? 'Overbought' : rsi <= 30 ? 'Oversold' : 'Neutral';
   const pct = Math.min(Math.max(animatedRsi / 100, 0), 1);
 
-  // 30/70 영역 표시
+  // 30/70 zone display
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
@@ -224,39 +224,39 @@ const RsiGauge: React.FC<{ rsi: number; animatedRsi: number }> = ({ rsi, animate
           <span style={{ fontSize: 22, color: DIM, marginLeft: 10, fontWeight: 500 }}>{label}</span>
         </span>
       </div>
-      {/* 트랙 */}
+      {/* Track */}
       <div style={{ position: 'relative', height: 12, background: BORDER, borderRadius: 6 }}>
-        {/* 과매도 구간 (0-30) */}
+        {/* Oversold zone (0-30) */}
         <div style={{
           position: 'absolute', left: 0, top: 0, bottom: 0,
           width: '30%', background: `${GREEN}30`, borderRadius: '6px 0 0 6px',
         }} />
-        {/* 과매수 구간 (70-100) */}
+        {/* Overbought zone (70-100) */}
         <div style={{
           position: 'absolute', right: 0, top: 0, bottom: 0,
           width: '30%', background: `${RED}30`, borderRadius: '0 6px 6px 0',
         }} />
-        {/* 현재값 바 */}
+        {/* Current value bar */}
         <div style={{
           position: 'absolute', left: 0, top: 0, bottom: 0,
           width: `${pct * 100}%`, background: color,
           borderRadius: 6, transition: 'none',
           boxShadow: `0 0 12px ${color}80`,
         }} />
-        {/* 30/70 경계선 */}
+        {/* 30/70 boundary lines */}
         <div style={{ position: 'absolute', left: '30%', top: -4, bottom: -4, width: 1, background: `${GREEN}80` }} />
         <div style={{ position: 'absolute', left: '70%', top: -4, bottom: -4, width: 1, background: `${RED}80` }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 18, color: GRAY }}>
-        <span style={{ color: GREEN }}>30 과매도</span>
+        <span style={{ color: GREEN }}>30 Oversold</span>
         <span>50</span>
-        <span style={{ color: RED }}>70 과매수</span>
+        <span style={{ color: RED }}>70 Overbought</span>
       </div>
     </div>
   );
 };
 
-// ─── 수치 뱃지 ───────────────────────────────────────────────────────────────
+// ─── Metric badge ───────────────────────────────────────────────────────────────
 const MetricBadge: React.FC<{
   label: string;
   value: string;
@@ -277,7 +277,7 @@ const MetricBadge: React.FC<{
   </div>
 );
 
-// ─── 씬 래퍼 (enter/exit 애니메이션) ────────────────────────────────────────
+// ─── Scene wrapper (enter/exit animation) ────────────────────────────────────────
 const Scene: React.FC<{
   children: React.ReactNode;
   frame: number;
@@ -328,7 +328,7 @@ const Scene: React.FC<{
   );
 };
 
-// ─── 자막 오버레이 ────────────────────────────────────────────────────────────
+// ─── Subtitle overlay ────────────────────────────────────────────────────────────
 const SubtitleOverlay: React.FC<{
   script: string;
   frame: number;
@@ -390,7 +390,7 @@ const SubtitleOverlay: React.FC<{
   );
 };
 
-// ─── 메인 컴포넌트 ───────────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 export const StockShort: React.FC<Props> = ({
   symbol,
   price,
@@ -410,11 +410,11 @@ export const StockShort: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // 씬 타이밍 (30fps 기준)
-  // 씬1: 0-5s (0-150f)   — 히어로
-  // 씬2: 4-13s (120-390f) — 차트
-  // 씬3: 12-23s (360-690f) — 퀀트 지표
-  // 씬4: 22-30s (660-900f) — 결론
+  // Scene timing (30fps)
+  // Scene1: 0-5s (0-150f) — Hero
+  // Scene2: 4-13s (120-390f) — Chart
+  // Scene3: 12-23s (360-690f) — Indicators
+  // Scene4: 22-30s (660-900f) — Conclusion
 
   const S1_ENTER = 0;
   const S1_EXIT = fps * 4.5;
@@ -427,7 +427,7 @@ export const StockShort: React.FC<Props> = ({
   const accentColor = changePct > 0 ? GREEN : changePct < 0 ? RED : YELLOW;
   const sign = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '■';
 
-  // 카운트업 애니메이션
+  // Count-up animations
   const animatedChangePct = countUp(frame, S1_ENTER + 15, 30, 0, Math.abs(changePct));
   const animatedPrice = countUp(frame, S1_ENTER + 5, 35, price * 0.97, price);
   const animatedRsi = countUp(frame, S3_ENTER + 15, 40, 0, rsi);
@@ -436,11 +436,11 @@ export const StockShort: React.FC<Props> = ({
   const macdBullish = macd > macdSignal;
   const macdColor = macdBullish ? GREEN : RED;
   const bbColor = bbPosition === 'upper' ? RED : bbPosition === 'lower' ? GREEN : YELLOW;
-  const bbLabel = bbPosition === 'upper' ? '상단 돌파' : bbPosition === 'lower' ? '하단 지지' : '중간대';
+  const bbLabel = bbPosition === 'upper' ? 'Upper Break' : bbPosition === 'lower' ? 'Lower Support' : 'Mid Band';
   const emaTrendColor = emaTrend === 'bullish' ? GREEN : emaTrend === 'bearish' ? RED : YELLOW;
-  const emaTrendLabel = emaTrend === 'bullish' ? '▲ 상승추세' : emaTrend === 'bearish' ? '▼ 하락추세' : '◆ 혼조';
+  const emaTrendLabel = emaTrend === 'bullish' ? '▲ Bullish' : emaTrend === 'bearish' ? '▼ Bearish' : '◆ Mixed';
 
-  // 씬1 내부 세부 애니메이션
+  // Scene1 internal animations
   const symbolSpring = spring({ frame, fps, from: 0, to: 1, config: { damping: 14, stiffness: 70 } });
   const priceSlide = interpolate(frame, [8, 28], [40, 0], {
     extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
@@ -456,10 +456,10 @@ export const StockShort: React.FC<Props> = ({
     }}>
 
       {audioPath && (
-        <Audio src={audioPath.startsWith('/') ? `file://${audioPath}` : staticFile(audioPath)} />
+        <Audio src={staticFile(audioPath)} />
       )}
 
-      {/* 배경 글로우 - 항상 표시 */}
+      {/* Background glow */}
       <div style={{
         position: 'absolute', top: -300, left: -200,
         width: 800, height: 800,
@@ -473,7 +473,7 @@ export const StockShort: React.FC<Props> = ({
         pointerEvents: 'none',
       }} />
 
-      {/* 상단 브랜드 바 - 항상 표시 */}
+      {/* Top brand bar */}
       <div style={{
         position: 'absolute', top: 0, left: 0, right: 0,
         height: 80, display: 'flex', alignItems: 'center',
@@ -489,11 +489,11 @@ export const StockShort: React.FC<Props> = ({
           background: SURFACE, border: `1px solid ${BORDER}`,
           borderRadius: 20, padding: '6px 18px',
         }}>
-          실시간 분석
+          LIVE
         </div>
       </div>
 
-      {/* 하단 면책고지 - 항상 표시 */}
+      {/* Bottom disclaimer */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -501,10 +501,10 @@ export const StockShort: React.FC<Props> = ({
         fontSize: 18, color: `${GRAY}88`,
         zIndex: 100,
       }}>
-        본 콘텐츠는 투자 조언이 아닙니다. 투자의 책임은 본인에게 있습니다.
+        This content is not investment advice. Invest at your own risk.
       </div>
 
-      {/* ══ 씬1: 히어로 — 심볼 + 가격 ══════════════════════════════════════════ */}
+      {/* ══ Scene1: Hero — Symbol + Price ══════════════════════════════════════════ */}
       <Scene frame={frame} enterAt={S1_ENTER} exitAt={S1_EXIT} slideFrom="top">
         <div style={{
           position: 'absolute', inset: 0,
@@ -512,7 +512,7 @@ export const StockShort: React.FC<Props> = ({
           justifyContent: 'center',
           padding: '100px 60px',
         }}>
-          {/* 심볼 */}
+          {/* Symbol */}
           <div style={{
             fontSize: 110, fontWeight: 900, color: WHITE,
             letterSpacing: -3, lineHeight: 1,
@@ -522,7 +522,7 @@ export const StockShort: React.FC<Props> = ({
             {symbol}
           </div>
 
-          {/* 가격 */}
+          {/* Price */}
           <div style={{
             fontSize: 76, fontWeight: 800, color: WHITE,
             marginTop: 16,
@@ -532,7 +532,7 @@ export const StockShort: React.FC<Props> = ({
             ${animatedPrice.toFixed(2)}
           </div>
 
-          {/* 변동률 뱃지 */}
+          {/* Change badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 12,
             marginTop: 32,
@@ -552,7 +552,7 @@ export const StockShort: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* EMA 추세 */}
+          {/* EMA trend */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 10,
             marginTop: 28, fontSize: 26, fontWeight: 700,
@@ -564,24 +564,24 @@ export const StockShort: React.FC<Props> = ({
             EMA {emaTrendLabel}
           </div>
 
-          {/* 구분선 */}
+          {/* Divider */}
           <div style={{
             marginTop: 48, height: 2,
             background: `linear-gradient(90deg, ${accentColor}80, transparent)`,
             width: '60%',
           }} />
 
-          {/* 티커 정보 */}
+          {/* Ticker info */}
           <div style={{
             marginTop: 24, fontSize: 22, color: DIM, lineHeight: 2,
           }}>
             <span style={{ color: GRAY, marginRight: 16 }}>NASDAQ</span>
-            시가총액 상위 종목 · 실시간 퀀트 분석
+            Real-time Market Analysis
           </div>
         </div>
       </Scene>
 
-      {/* ══ 씬2: 차트 ══════════════════════════════════════════════════════════ */}
+      {/* ══ Scene2: Chart ══════════════════════════════════════════════════════════ */}
       <Scene frame={frame} enterAt={S2_ENTER} exitAt={S2_EXIT} slideFrom="bottom">
         <div style={{
           position: 'absolute', inset: 0,
@@ -590,15 +590,15 @@ export const StockShort: React.FC<Props> = ({
           padding: '100px 60px',
         }}>
           <div style={{ fontSize: 32, fontWeight: 700, color: DIM, marginBottom: 8 }}>
-            가격 추이
+            Price History
           </div>
           <div style={{
             fontSize: 52, fontWeight: 900, color: WHITE, marginBottom: 40,
           }}>
-            최근 20거래일
+            Last 20 Trading Days
           </div>
 
-          {/* 차트 카드 */}
+          {/* Chart card */}
           <div style={{
             background: SURFACE,
             border: `1px solid ${BORDER}`,
@@ -614,7 +614,7 @@ export const StockShort: React.FC<Props> = ({
             />
           </div>
 
-          {/* 가격 요약 */}
+          {/* Price summary */}
           {chartData.length >= 2 && (
             <div style={{
               display: 'flex', gap: 20, marginTop: 28,
@@ -623,7 +623,7 @@ export const StockShort: React.FC<Props> = ({
                 flex: 1, background: SURFACE2, border: `1px solid ${BORDER}`,
                 borderRadius: 16, padding: '20px 24px', textAlign: 'center',
               }}>
-                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>20일 전</div>
+                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>20d ago</div>
                 <div style={{ fontSize: 38, fontWeight: 800, color: WHITE, fontVariantNumeric: 'tabular-nums' }}>
                   ${chartData[0].toFixed(2)}
                 </div>
@@ -633,7 +633,7 @@ export const StockShort: React.FC<Props> = ({
                 borderRadius: 16, padding: '20px 24px', textAlign: 'center',
                 boxShadow: `0 0 24px ${accentColor}15`,
               }}>
-                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>현재가</div>
+                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>Current</div>
                 <div style={{ fontSize: 38, fontWeight: 800, color: accentColor, fontVariantNumeric: 'tabular-nums' }}>
                   ${chartData[chartData.length - 1].toFixed(2)}
                 </div>
@@ -642,7 +642,7 @@ export const StockShort: React.FC<Props> = ({
                 flex: 1, background: SURFACE2, border: `1px solid ${BORDER}`,
                 borderRadius: 16, padding: '20px 24px', textAlign: 'center',
               }}>
-                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>20일 변동</div>
+                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>20d Change</div>
                 <div style={{
                   fontSize: 38, fontWeight: 800, fontVariantNumeric: 'tabular-nums',
                   color: chartData[chartData.length - 1] > chartData[0] ? GREEN : RED,
@@ -655,7 +655,7 @@ export const StockShort: React.FC<Props> = ({
         </div>
       </Scene>
 
-      {/* ══ 씬3: 퀀트 지표 ═════════════════════════════════════════════════════ */}
+      {/* ══ Scene3: Indicators ═════════════════════════════════════════════════════ */}
       <Scene frame={frame} enterAt={S3_ENTER} exitAt={S3_EXIT} slideFrom="bottom">
         <div style={{
           position: 'absolute', inset: 0,
@@ -664,13 +664,13 @@ export const StockShort: React.FC<Props> = ({
           padding: '100px 60px',
         }}>
           <div style={{ fontSize: 32, fontWeight: 700, color: DIM, marginBottom: 8 }}>
-            기술적 분석
+            Technical Analysis
           </div>
           <div style={{ fontSize: 52, fontWeight: 900, color: WHITE, marginBottom: 40 }}>
-            퀀트 시그널
+            Key Indicators
           </div>
 
-          {/* RSI 카드 */}
+          {/* RSI card */}
           <div style={{
             background: SURFACE, border: `1px solid ${BORDER}`,
             borderRadius: 24, padding: '36px 36px', marginBottom: 24,
@@ -682,18 +682,18 @@ export const StockShort: React.FC<Props> = ({
           <div style={{ display: 'flex', gap: 16 }}>
             <MetricBadge
               label="MACD"
-              value={macdBullish ? '골든크로스 ↑' : '데드크로스 ↓'}
+              value={macdBullish ? 'Golden Cross ↑' : 'Death Cross ↓'}
               color={macdColor}
               icon="📊"
             />
             <MetricBadge
-              label="볼린저밴드"
+              label="Bollinger"
               value={`${bbLabel}`}
               color={bbColor}
               icon="📉"
             />
             <MetricBadge
-              label="거래량"
+              label="Volume"
               value={`${animatedVol.toFixed(1)}x`}
               color={animatedVol >= 2 ? RED : animatedVol >= 1.5 ? YELLOW : GREEN}
               icon="📦"
@@ -702,7 +702,7 @@ export const StockShort: React.FC<Props> = ({
         </div>
       </Scene>
 
-      {/* ══ 씬4: 결론 ══════════════════════════════════════════════════════════ */}
+      {/* ══ Scene4: Conclusion ══════════════════════════════════════════════════════════ */}
       <Scene frame={frame} enterAt={S4_ENTER} slideFrom="bottom">
         <div style={{
           position: 'absolute', inset: 0,
@@ -710,7 +710,7 @@ export const StockShort: React.FC<Props> = ({
           justifyContent: 'center',
           padding: '100px 60px',
         }}>
-          {/* 결론 카드 */}
+          {/* Conclusion card */}
           <div style={{
             background: `linear-gradient(135deg, ${accentColor}18 0%, ${SURFACE} 60%)`,
             border: `1.5px solid ${accentColor}50`,
@@ -718,7 +718,7 @@ export const StockShort: React.FC<Props> = ({
             boxShadow: `0 0 80px ${accentColor}20`,
           }}>
             <div style={{ fontSize: 28, color: accentColor, fontWeight: 600, marginBottom: 16 }}>
-              오늘의 분석 결론
+              Today's Analysis
             </div>
             <div style={{ fontSize: 56, fontWeight: 900, color: WHITE, lineHeight: 1.2, marginBottom: 24 }}>
               {cardTitle}
@@ -729,7 +729,7 @@ export const StockShort: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* 퀀트 요약 뱃지 */}
+          {/* Summary badges */}
           <div style={{
             display: 'flex', gap: 16, marginTop: 36, flexWrap: 'wrap',
           }}>
@@ -762,17 +762,17 @@ export const StockShort: React.FC<Props> = ({
             </div>
           </div>
 
-          {/* 팔로우 CTA */}
+          {/* Follow CTA */}
           <div style={{
             marginTop: 48, textAlign: 'center',
             fontSize: 30, fontWeight: 700, color: WHITE,
           }}>
-            @stock.snap 팔로우하고 매일 분석 받기 📈
+            Follow @stock.snap for daily analysis 📈
           </div>
         </div>
       </Scene>
 
-      {/* 자막 오버레이 */}
+      {/* Subtitle overlay */}
       {script && (
         <SubtitleOverlay script={script} frame={frame} totalFrames={fps * 30} />
       )}
