@@ -36,6 +36,7 @@ interface Props {
   bgmPath?: string;         // Background music file name (in public/)
   totalFrames?: number;     // Override composition duration (default 1350)
   sceneDurations?: number[]; // Per-scene frame counts [s1,s2,s3,s4,s5]
+  subtitleTimings?: number[][][]; // Per-scene, per-sentence [start_sec, end_sec]
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -344,6 +345,26 @@ const Scene: React.FC<{
   );
 };
 
+// ─── Korean line-wrapping helper ──────────────────────────────────────────────
+const wrapKoreanText = (text: string, maxCharsPerLine = 18): string => {
+  if (text.length <= maxCharsPerLine) return text;
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    if (!line) {
+      line = word;
+    } else if (line.length + 1 + word.length <= maxCharsPerLine) {
+      line += ' ' + word;
+    } else {
+      lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.join('\n');
+};
+
 // ─── Scene-aware subtitle overlay ────────────────────────────────────────────────
 const SubtitleOverlay: React.FC<{
   script: string;
@@ -352,7 +373,8 @@ const SubtitleOverlay: React.FC<{
   totalFrames?: number;
   scriptSegments?: string[];
   sceneDurations?: number[];
-}> = ({ script, frame, fps, totalFrames = 1350, scriptSegments, sceneDurations }) => {
+  subtitleTimings?: number[][][]; // [segment][sentence][start_sec, end_sec]
+}> = ({ script, frame, fps, totalFrames = 1350, scriptSegments, sceneDurations, subtitleTimings }) => {
   // Compute scene ranges from durations (same logic as main component)
   const DEFAULT_DURATIONS = [
     Math.round(fps * 5), Math.round(fps * 12), Math.round(fps * 9),
@@ -371,40 +393,86 @@ const SubtitleOverlay: React.FC<{
   let segmentOpacity = 0;
 
   if (scriptSegments && scriptSegments.length === 5) {
-    // Scene-synced mode: show segment text during its scene
     for (let i = 0; i < sceneRanges.length; i++) {
       const { start, end } = sceneRanges[i];
       if (frame >= start && frame < end) {
         const sentences = scriptSegments[i]
-          .split(/(?<=[.!?。])\s*/)
+          .split(/(?<=[.!?。])\s+/)
           .map(s => s.trim())
           .filter(Boolean);
         if (sentences.length === 0) break;
 
-        const sceneDuration = end - start;
-        const framesPerSentence = Math.floor(sceneDuration / sentences.length);
         const localFrame = frame - start;
-        const sentIdx = Math.min(Math.floor(localFrame / framesPerSentence), sentences.length - 1);
-        const sentFrame = localFrame - sentIdx * framesPerSentence;
+        const localSec = localFrame / fps;
 
-        segmentOpacity = interpolate(sentFrame, [0, 8, framesPerSentence - 10, framesPerSentence], [0, 1, 1, 0], {
-          extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-        });
-        currentText = sentences[sentIdx];
+        // ── TTS-synced mode: use word-boundary timing data ──
+        const segTimings = subtitleTimings && subtitleTimings.length > i ? subtitleTimings[i] : null;
+        if (segTimings && segTimings.length > 0) {
+          for (let j = 0; j < Math.min(sentences.length, segTimings.length); j++) {
+            const [startSec, endSec] = segTimings[j];
+            if (localSec >= startSec && localSec < endSec) {
+              const startFr = Math.floor(startSec * fps);
+              const endFr = Math.floor(endSec * fps);
+              const span = endFr - startFr;
+              segmentOpacity = interpolate(
+                localFrame,
+                [startFr, startFr + 5, endFr - 5, endFr],
+                [0, 1, 1, 0],
+                { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
+              );
+              // Also show last sentence at scene end if no next sentence covers this frame
+              if (span < 3) segmentOpacity = 1;
+              currentText = wrapKoreanText(sentences[j]);
+              break;
+            }
+          }
+        } else {
+          // ── Fallback: equal-time distribution (char-weighted) ──
+          const totalChars = sentences.reduce((s, t) => s + t.length, 0) || 1;
+          const sceneDur = end - start;
+          let sentStart = 0;
+          for (let j = 0; j < sentences.length; j++) {
+            const sentFrames = Math.round(sceneDur * sentences[j].length / totalChars);
+            const sentEnd = sentStart + sentFrames;
+            if (localFrame >= sentStart && localFrame < sentEnd) {
+              const span = sentEnd - sentStart;
+              segmentOpacity = interpolate(
+                localFrame - sentStart,
+                [0, 6, span - 8, span],
+                [0, 1, 1, 0],
+                { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
+              );
+              currentText = wrapKoreanText(sentences[j]);
+              break;
+            }
+            sentStart = sentEnd;
+          }
+        }
         break;
       }
     }
   } else {
     // Fallback: evenly distributed across total frames
-    const sentences = script.split(/(?<=[.!?。])\s*/).map(s => s.trim()).filter(Boolean);
+    const sentences = script.split(/(?<=[.!?。])\s+/).map(s => s.trim()).filter(Boolean);
     if (sentences.length === 0) return null;
-    const framesPerSentence = Math.floor(totalFrames / sentences.length);
-    const currentIdx = Math.min(Math.floor(frame / framesPerSentence), sentences.length - 1);
-    const sentenceFrame = frame - currentIdx * framesPerSentence;
-    segmentOpacity = interpolate(sentenceFrame, [0, 8, framesPerSentence - 10, framesPerSentence], [0, 1, 1, 0], {
-      extrapolateLeft: 'clamp', extrapolateRight: 'clamp',
-    });
-    currentText = sentences[currentIdx];
+    const totalChars = sentences.reduce((s, t) => s + t.length, 0) || 1;
+    let sentStart = 0;
+    for (let j = 0; j < sentences.length; j++) {
+      const sentFrames = Math.round(totalFrames * sentences[j].length / totalChars);
+      const sentEnd = sentStart + sentFrames;
+      if (frame >= sentStart && frame < sentEnd) {
+        const span = sentEnd - sentStart;
+        segmentOpacity = interpolate(
+          frame - sentStart,
+          [0, 6, span - 8, span],
+          [0, 1, 1, 0],
+          { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' },
+        );
+        currentText = wrapKoreanText(sentences[j]);
+        break;
+      }
+      sentStart = sentEnd;
+    }
   }
 
   if (!currentText || segmentOpacity < 0.01) return null;
@@ -420,7 +488,7 @@ const SubtitleOverlay: React.FC<{
       zIndex: 50,
     }}>
       <div style={{
-        background: 'rgba(8, 12, 24, 0.85)',
+        background: 'rgba(8, 12, 24, 0.88)',
         borderRadius: 16,
         padding: '18px 28px',
         border: `1px solid ${BORDER}`,
@@ -431,10 +499,13 @@ const SubtitleOverlay: React.FC<{
           fontSize: 34,
           fontWeight: 700,
           color: WHITE,
-          lineHeight: 1.5,
+          lineHeight: 1.55,
           textAlign: 'center',
           fontFamily: "'Noto Sans KR', sans-serif",
           textShadow: '0 2px 6px rgba(0,0,0,0.9)',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'keep-all',
+          overflowWrap: 'break-word',
         }}>
           {currentText}
         </p>
@@ -465,6 +536,7 @@ export const StockShort: React.FC<Props> = ({
   scriptSegments = [],
   bgmPath = '',
   sceneDurations = [],
+  subtitleTimings = [],
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -535,9 +607,9 @@ export const StockShort: React.FC<Props> = ({
         <Audio src={staticFile(audioPath)} volume={1} />
       ) : null}
 
-      {/* BGM: subtle background music at -15dB (volume ≈ 0.178) */}
+      {/* BGM: subtle background music at -18dB (volume ≈ 0.126) */}
       {bgmPath ? (
-        <Audio src={staticFile(bgmPath)} volume={0.178} />
+        <Audio src={staticFile(bgmPath)} volume={0.126} />
       ) : null}
 
       {/* Background glow */}
@@ -970,6 +1042,7 @@ export const StockShort: React.FC<Props> = ({
           totalFrames={_S5_EXIT}
           scriptSegments={scriptSegments.length === 5 ? scriptSegments : undefined}
           sceneDurations={sceneDurations.length === 5 ? sceneDurations : undefined}
+          subtitleTimings={subtitleTimings.length === 5 ? subtitleTimings : undefined}
         />
       )}
 
