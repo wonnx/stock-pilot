@@ -9,6 +9,7 @@ import {
   Audio,
   staticFile,
   Easing,
+  CalculateMetadataFunction,
 } from 'remotion';
 
 interface Props {
@@ -32,7 +33,15 @@ interface Props {
   newsHeadlines?: string[]; // Top news headlines explaining the move
   audioSegments?: string[]; // Per-scene audio file names (5 segments)
   scriptSegments?: string[]; // Per-scene subtitle text (5 segments)
+  bgmPath?: string;         // Background music file name (in public/)
+  totalFrames?: number;     // Override composition duration (default 1350)
+  sceneDurations?: number[]; // Per-scene frame counts [s1,s2,s3,s4,s5]
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const calculateMetadata: CalculateMetadataFunction<any> = ({ props }: { props: Props }) => {
+  return { durationInFrames: props.totalFrames ?? 1350 };
+};
 
 // ─── Color palette ────────────────────────────────────────────────────────────
 const BG = '#080c18';
@@ -342,15 +351,20 @@ const SubtitleOverlay: React.FC<{
   fps: number;
   totalFrames?: number;
   scriptSegments?: string[];
-}> = ({ script, frame, fps, totalFrames = 1350, scriptSegments }) => {
-  // Scene frame ranges (must match main component timing)
-  const sceneRanges = [
-    { start: 0, end: fps * 4.5 },         // S1 Hero
-    { start: fps * 5, end: fps * 16.5 },   // S2 News
-    { start: fps * 17, end: fps * 25.5 },  // S3 Chart
-    { start: fps * 26, end: fps * 36.5 },  // S4 Indicators
-    { start: fps * 37, end: fps * 45 },    // S5 Conclusion
+  sceneDurations?: number[];
+}> = ({ script, frame, fps, totalFrames = 1350, scriptSegments, sceneDurations }) => {
+  // Compute scene ranges from durations (same logic as main component)
+  const DEFAULT_DURATIONS = [
+    Math.round(fps * 5), Math.round(fps * 12), Math.round(fps * 9),
+    Math.round(fps * 11), Math.round(fps * 8),
   ];
+  const dur = sceneDurations && sceneDurations.length === 5 ? sceneDurations : DEFAULT_DURATIONS;
+  let cursor = 0;
+  const sceneRanges = dur.map((d) => {
+    const range = { start: cursor, end: cursor + d };
+    cursor += d;
+    return range;
+  });
 
   // Determine which text to show based on scene timing
   let currentText = '';
@@ -449,26 +463,33 @@ export const StockShort: React.FC<Props> = ({
   newsHeadlines = [],
   audioSegments = [],
   scriptSegments = [],
+  bgmPath = '',
+  sceneDurations = [],
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Scene timing (30fps)
-  // Scene1: 0-5s (0-150f) — Hero
-  // Scene2: 4-13s (120-390f) — Chart
-  // Scene3: 12-23s (360-690f) — Indicators
-  // Scene4: 22-30s (660-900f) — Conclusion
+  // Default scene durations (frames): [Hero, News, Chart, Indicators, Conclusion]
+  const DEFAULT_DURATIONS = [
+    Math.round(fps * 5),   // 5s
+    Math.round(fps * 12),  // 12s
+    Math.round(fps * 9),   // 9s
+    Math.round(fps * 11),  // 11s
+    Math.round(fps * 8),   // 8s
+  ];
+  const dur = sceneDurations.length === 5 ? sceneDurations : DEFAULT_DURATIONS;
 
-  // Scene timing — 5 scenes, 45s total, no overlap
-  const S1_ENTER = 0;            // Hero: 0-5s
-  const S1_EXIT = fps * 4.5;
-  const S2_ENTER = fps * 5;      // News: 5-17s (12s for detailed reading)
-  const S2_EXIT = fps * 16.5;
-  const S3_ENTER = fps * 17;     // Chart: 17-26s
-  const S3_EXIT = fps * 25.5;
-  const S4_ENTER = fps * 26;     // Indicators: 26-37s
-  const S4_EXIT = fps * 36.5;
-  const S5_ENTER = fps * 37;     // Conclusion: 37-45s
+  // Compute scene enter/exit from durations (no overlap)
+  const S1_ENTER = 0;
+  const S1_EXIT  = dur[0];
+  const S2_ENTER = dur[0];
+  const S2_EXIT  = dur[0] + dur[1];
+  const S3_ENTER = dur[0] + dur[1];
+  const S3_EXIT  = dur[0] + dur[1] + dur[2];
+  const S4_ENTER = dur[0] + dur[1] + dur[2];
+  const S4_EXIT  = dur[0] + dur[1] + dur[2] + dur[3];
+  const S5_ENTER = dur[0] + dur[1] + dur[2] + dur[3];
+  const _S5_EXIT = S5_ENTER + dur[4]; // used for subtitle range
 
   const accentColor = changePct > 0 ? GREEN : changePct < 0 ? RED : YELLOW;
   const sign = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '■';
@@ -501,17 +522,22 @@ export const StockShort: React.FC<Props> = ({
       overflow: 'hidden',
     }}>
 
-      {/* Audio: per-scene segments with duration limits to prevent overlap */}
+      {/* Audio: per-scene TTS segments with dynamic timing */}
       {audioSegments.length === 5 ? (
         <>
-          <Sequence from={0} durationInFrames={Math.round(fps * 5)}><Audio src={staticFile(audioSegments[0])} volume={1} /></Sequence>
-          <Sequence from={Math.round(fps * 5)} durationInFrames={Math.round(fps * 12)}><Audio src={staticFile(audioSegments[1])} volume={1} /></Sequence>
-          <Sequence from={Math.round(fps * 17)} durationInFrames={Math.round(fps * 9)}><Audio src={staticFile(audioSegments[2])} volume={1} /></Sequence>
-          <Sequence from={Math.round(fps * 26)} durationInFrames={Math.round(fps * 11)}><Audio src={staticFile(audioSegments[3])} volume={1} /></Sequence>
-          <Sequence from={Math.round(fps * 37)} durationInFrames={Math.round(fps * 8)}><Audio src={staticFile(audioSegments[4])} volume={1} /></Sequence>
+          <Sequence from={S1_ENTER} durationInFrames={dur[0]}><Audio src={staticFile(audioSegments[0])} volume={1} /></Sequence>
+          <Sequence from={S2_ENTER} durationInFrames={dur[1]}><Audio src={staticFile(audioSegments[1])} volume={1} /></Sequence>
+          <Sequence from={S3_ENTER} durationInFrames={dur[2]}><Audio src={staticFile(audioSegments[2])} volume={1} /></Sequence>
+          <Sequence from={S4_ENTER} durationInFrames={dur[3]}><Audio src={staticFile(audioSegments[3])} volume={1} /></Sequence>
+          <Sequence from={S5_ENTER} durationInFrames={dur[4]}><Audio src={staticFile(audioSegments[4])} volume={1} /></Sequence>
         </>
       ) : audioPath ? (
         <Audio src={staticFile(audioPath)} volume={1} />
+      ) : null}
+
+      {/* BGM: subtle background music at -15dB (volume ≈ 0.178) */}
+      {bgmPath ? (
+        <Audio src={staticFile(bgmPath)} volume={0.178} />
       ) : null}
 
       {/* Background glow */}
@@ -941,8 +967,9 @@ export const StockShort: React.FC<Props> = ({
           script={script}
           frame={frame}
           fps={fps}
-          totalFrames={fps * 45}
+          totalFrames={_S5_EXIT}
           scriptSegments={scriptSegments.length === 5 ? scriptSegments : undefined}
+          sceneDurations={sceneDurations.length === 5 ? sceneDurations : undefined}
         />
       )}
 

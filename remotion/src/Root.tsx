@@ -1,6 +1,6 @@
 import React from 'react';
 import { Composition } from 'remotion';
-import { StockShort } from './StockShort';
+import { StockShort, calculateMetadata } from './StockShort';
 import { StockThumbnail } from './StockThumbnail';
 
 export const RemotionRoot: React.FC = () => {
@@ -10,6 +10,8 @@ export const RemotionRoot: React.FC = () => {
         id="StockShort"
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         component={StockShort as any}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        calculateMetadata={calculateMetadata as any}
         durationInFrames={1350}
         fps={30}
         width={1080}
@@ -35,6 +37,9 @@ export const RemotionRoot: React.FC = () => {
           newsHeadlines: ['아이폰 16 판매 호조로 실적 기대감 상승', '워런 버핏 애플 지분 추가 매수 소식'],
           audioSegments: [],
           scriptSegments: [],
+          bgmPath: '',
+          totalFrames: 1350,
+          sceneDurations: [],
         }}
       />
       <Composition
