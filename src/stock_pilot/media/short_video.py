@@ -71,6 +71,7 @@ def generate_short_video(
     bgm_path: Path | None = None,
     total_frames: int = 1350,
     scene_durations: list[int] | None = None,
+    subtitle_timings: list[list[tuple[float, float]]] | None = None,
 ) -> bool:
     """Render a short-form video via Remotion CLI. Returns True on success."""
     if not REMOTION_DIR.exists():
@@ -134,6 +135,10 @@ def generate_short_video(
         # Dynamic duration
         "totalFrames": total_frames,
         "sceneDurations": scene_durations or [],
+        # Subtitle timing data: [segment][sentence][start_sec, end_sec]
+        "subtitleTimings": [
+            [[s, e] for s, e in seg] for seg in subtitle_timings
+        ] if subtitle_timings else [],
     }
 
     cmd = [

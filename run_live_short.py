@@ -289,16 +289,18 @@ def run():
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     video_path = output_dir / f"{symbol}_{ts}_short.mp4"
 
-    # 4b. TTS narration — generate per-scene audio segments for sync
-    from stock_pilot.media.tts import generate_tts
+    # 4b. TTS narration — generate per-scene audio segments with timing data
+    from stock_pilot.media.tts import generate_tts_with_timing, generate_tts
     tts_segment_paths = []
+    subtitle_timings: list[list[tuple[float, float]]] = []
     tts_all_ok = True
     for i, seg_text in enumerate(script_segments):
         seg_path = output_dir / f"{symbol}_{ts}_tts_s{i}.mp3"
-        ok = generate_tts(seg_text, seg_path)
+        ok, seg_timings = generate_tts_with_timing(seg_text, seg_path)
         if ok:
             tts_segment_paths.append(seg_path)
-            logger.info("TTS segment %d: %s", i, seg_path)
+            subtitle_timings.append(seg_timings)
+            logger.info("TTS segment %d: %s (%d sentence timings)", i, seg_path, len(seg_timings))
         else:
             tts_all_ok = False
             logger.warning("TTS segment %d failed", i)
@@ -311,6 +313,7 @@ def run():
         if generate_tts(script, tts_path):
             audio_path = tts_path
             tts_segment_paths = []
+            subtitle_timings = []
             logger.info("TTS fallback (single file): %s", tts_path)
         else:
             logger.warning("TTS generation skipped")
@@ -353,6 +356,7 @@ def run():
         bgm_path=bgm_path,
         total_frames=total_frames,
         scene_durations=scene_dur_frames,
+        subtitle_timings=subtitle_timings if len(subtitle_timings) == 5 else None,
     )
     if not ok or not video_path.exists():
         logger.error("Video rendering failed")
