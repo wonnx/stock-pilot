@@ -217,7 +217,7 @@ class ContentPipeline:
             if result.video_ok and result.video_path:
                 try:
                     from stock_pilot.upload.youtube import youtube
-                    tags = [symbol, "stocks", "USstocks", "shorts", "YouTubeShorts", "quant"]
+                    tags = [symbol, "stocks", "USstocks", "shorts", "YouTubeShorts", "stockmarket"]
                     vid_id = youtube.upload_short(result.video_path, pkg.card_title, pkg.caption, tags)
                     result.youtube_ok = vid_id is not None
                 except Exception as e:
