@@ -77,47 +77,53 @@ def run():
     rsi_label = "overbought" if rsi >= 70 else ("oversold" if rsi <= 30 else "neutral")
     macd_label = "golden cross" if macd > macd_signal else "death cross"
 
-    card_title = f"{symbol} {arrow}{abs(change_pct):.1f}% {'surge' if change_pct > 0 else 'plunge'}"
-    card_subtitle = f"RSI {rsi_label}({rsi:.0f}) | MACD {macd_label}"
+    rsi_label_ko = "과매수" if rsi >= 70 else ("과매도" if rsi <= 30 else "중립")
+    macd_label_ko = "골든크로스" if macd > macd_signal else "데드크로스"
+
+    card_title = f"{symbol} {arrow}{abs(change_pct):.1f}% {'급등' if change_pct > 0 else '급락'}"
+    card_subtitle = f"RSI {rsi_label_ko}({rsi:.0f}) | MACD {macd_label_ko}"
     card_body = (
-        f"Price: ${price:,.2f}\n"
-        f"Change: {arrow} {abs(change_pct):.2f}%\n"
-        f"Volume: {vol_ratio:.1f}x average"
+        f"현재가: ${price:,.2f}\n"
+        f"변동: {arrow} {abs(change_pct):.2f}%\n"
+        f"거래량: 평균 대비 {vol_ratio:.1f}배"
     )
 
     script = (
-        f"Today {symbol} {'surged' if change_pct > 0 else 'plunged'} {abs(change_pct):.1f} percent. "
-        f"RSI is at {rsi:.0f}, entering the {rsi_label} zone, "
-        f"and MACD shows a {macd_label}. "
-        f"Volume spiked to {vol_ratio:.1f}x the 20-day average. "
-        f"{'Will this plunge become a buying opportunity, or is more downside ahead?' if change_pct < 0 else 'Can this rally sustain?'}"
-        f" This content is not investment advice."
+        f"오늘 {symbol}이 {abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}했습니다. "
+        f"RSI는 {rsi:.0f}으로 {rsi_label_ko} 구간에 진입했고, "
+        f"MACD는 {macd_label_ko}를 보이고 있습니다. "
+        f"거래량은 20일 평균 대비 {vol_ratio:.1f}배 급증했습니다. "
+        f"{'이번 하락이 매수 기회가 될지, 추가 하락이 이어질지 주목됩니다.' if change_pct < 0 else '이 상승세가 지속될 수 있을지 주목됩니다.'}"
+        f" 본 콘텐츠는 투자 조언이 아닙니다."
     )
 
-    news_summary = "\n".join(f"• {n.title}" for n in news_items[:3]) if news_items else ""
+    news_summary = "\n".join(f"- {n.title}" for n in news_items[:3]) if news_items else ""
     rsi_outlook = (
-        "RSI approaching oversold — potential rebound zone." if rsi <= 35
-        else ("RSI in overbought territory — watch for pullback." if rsi >= 65
-              else "RSI neutral — trend continuation likely.")
+        "RSI 과매도 접근 — 반등 가능 구간입니다." if rsi <= 35
+        else ("RSI 과매수 영역 — 조정 가능성에 유의하세요." if rsi >= 65
+              else "RSI 중립 — 추세 지속 가능성이 높습니다.")
     )
+
+    bb_label_ko = "상단 돌파" if bb_pos == "upper" else ("하단 지지" if bb_pos == "lower" else "중간대")
+    ema_label_ko = "상승추세" if ema == "bullish" else ("하락추세" if ema == "bearish" else "혼조")
 
     caption = (
         f"${symbol} {arrow}{abs(change_pct):.1f}% "
-        f"{'plunge' if change_pct < 0 else 'surge'}!\n\n"
-        f"[Technical Analysis]\n"
-        f"- Price: ${price:,.2f} ({sign}{abs(change_pct):.2f}%)\n"
-        f"- RSI {rsi:.0f} ({rsi_label}) | MACD: {macd_label}\n"
-        f"- Volume: {vol_ratio:.1f}x 20-day average spike\n"
-        f"- Bollinger: {bb_pos} | EMA Trend: {ema}\n\n"
-        + (f"[Key News]\n{news_summary}\n\n" if news_summary else "")
-        + f"[Short-term Outlook]\n"
-        f"{'Monitor for continued downside pressure.' if change_pct < 0 else 'Monitor for resistance levels.'} "
+        f"{'급락' if change_pct < 0 else '급등'}!\n\n"
+        f"[기술적 분석]\n"
+        f"- 현재가: ${price:,.2f} ({sign}{abs(change_pct):.2f}%)\n"
+        f"- RSI {rsi:.0f} ({rsi_label_ko}) | MACD: {macd_label_ko}\n"
+        f"- 거래량: 20일 평균 대비 {vol_ratio:.1f}배 급증\n"
+        f"- 볼린저: {bb_label_ko} | EMA 추세: {ema_label_ko}\n\n"
+        + (f"[주요 뉴스]\n{news_summary}\n\n" if news_summary else "")
+        + f"[단기 전망]\n"
+        f"{'하방 압력 지속 여부를 주시하세요.' if change_pct < 0 else '저항선 돌파 여부를 주시하세요.'} "
         f"{rsi_outlook}\n\n"
-        f"#{symbol} #stocks #USstocks #stockmarket #investing #shorts\n"
-        f"This content is not investment advice."
+        f"#{symbol} #주식 #미국주식 #주식투자 #투자 #숏폼\n"
+        f"본 콘텐츠는 투자 조언이 아닙니다."
     )
 
-    quant_summary = f"RSI {rsi:.0f}({rsi_label}), MACD {macd_label}, BB {bb_pos}, EMA {ema}"
+    quant_summary = f"RSI {rsi:.0f}({rsi_label_ko}), MACD {macd_label_ko}, 볼린저 {bb_label_ko}, EMA {ema_label_ko}"
 
     pkg = ContentPackage(
         symbol=symbol,
@@ -137,11 +143,11 @@ def run():
         ema_trend=ema,
         quant_summary=quant_summary,
         forecast_detail=(
-            f"{'Bearish pressure visible.' if change_pct < 0 else 'Bullish momentum observed.'} "
-            f"RSI at {rsi:.0f} ({rsi_label}). "
-            f"MACD shows {macd_label}. "
-            f"Volume at {vol_ratio:.1f}x average. "
-            f"{'Watch for support levels before re-entry.' if change_pct < 0 else 'Watch for resistance before adding.'}"
+            f"{'하방 압력이 관찰됩니다.' if change_pct < 0 else '상승 모멘텀이 관찰됩니다.'} "
+            f"RSI {rsi:.0f} ({rsi_label_ko}). "
+            f"MACD {macd_label_ko}. "
+            f"거래량 평균 대비 {vol_ratio:.1f}배. "
+            f"{'지지선 확인 후 진입을 검토하세요.' if change_pct < 0 else '저항선 확인 후 추가 매수를 검토하세요.'}"
         ),
         chart_data=chart_data,
     )

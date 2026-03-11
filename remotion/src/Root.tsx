@@ -16,10 +16,10 @@ export const RemotionRoot: React.FC = () => {
         symbol: 'AAPL',
         price: 150.0,
         changePct: 2.5,
-        direction: '상승',
-        cardTitle: '애플 급등',
+        direction: 'rising',
+        cardTitle: 'AAPL 2.5% 급등',
         cardSubtitle: '아이폰 판매 호조',
-        script: '오늘 애플 주가가 2.5% 상승했습니다.',
+        script: '오늘 애플이 2.5퍼센트 급등했습니다. RSI는 55로 중립 구간이며, MACD는 골든크로스를 보이고 있습니다.',
         audioPath: '',
         rsi: 55,
         macd: 0.5,
@@ -27,7 +27,7 @@ export const RemotionRoot: React.FC = () => {
         volumeRatio: 1.8,
         bbPosition: 'upper',
         emaTrend: 'bullish',
-        quantSummary: 'RSI 중립, MACD 골든크로스',
+        quantSummary: 'RSI 55(중립), MACD 골든크로스, 볼린저 상단, EMA 상승',
         chartData: [148, 149, 147, 150, 152, 151, 153, 150, 148, 150, 152, 154, 153, 155, 154, 156, 155, 157, 156, 158],
       }}
     />
