@@ -33,11 +33,11 @@ def format_signal_message(signal: TradeSignal) -> str:
 
     lines = [
         f"{dir_emoji} *{signal.symbol}* — {signal.direction.value}",
-        f"강도: {signal.strength:.0%} {conf_emoji} ({signal.confidence})",
-        f"현재가: ${signal.close:.2f}",
-        f"지지선: ${signal.support:.2f} | 저항선: ${signal.resistance:.2f}",
+        f"Strength: {signal.strength:.0%} {conf_emoji} ({signal.confidence})",
+        f"Price: ${signal.close:.2f}",
+        f"Support: ${signal.support:.2f} | Resistance: ${signal.resistance:.2f}",
         "",
-        "*근거:*",
+        "*Reasons:*",
     ]
 
     for reason in signal.reasons[:5]:
@@ -45,11 +45,11 @@ def format_signal_message(signal: TradeSignal) -> str:
 
     if signal.warnings:
         lines.append("")
-        lines.append("*⚠️ 주의:*")
+        lines.append("*Warnings:*")
         for warning in signal.warnings[:3]:
             lines.append(f"• {warning}")
 
-    lines.append(f"\n스코어: {signal.score:+.2f}")
+    lines.append(f"\nScore: {signal.score:+.2f}")
     return "\n".join(lines)
 
 

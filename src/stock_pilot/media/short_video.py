@@ -27,7 +27,7 @@ def generate_short_video(
         "cardSubtitle": pkg.card_subtitle,
         "script": pkg.script,
         "audioPath": str(audio_path) if audio_path else "",
-        # 퀀트 분석 데이터
+        # Quant analysis data
         "rsi": pkg.rsi,
         "macd": pkg.macd,
         "macdSignal": pkg.macd_signal,
