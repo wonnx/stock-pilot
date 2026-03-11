@@ -113,7 +113,7 @@ def run():
         + f"🔮 Short-term Outlook:\n"
         f"{'Monitor for continued downside pressure.' if change_pct < 0 else 'Monitor for resistance levels.'} "
         f"{rsi_outlook}\n\n"
-        f"#{symbol} #stocks #USstocks #quant #stockmarket #investing #shorts\n"
+        f"#{symbol} #stocks #USstocks #stockmarket #investing #shorts\n"
         f"⚠️ This content is not investment advice."
     )
 
