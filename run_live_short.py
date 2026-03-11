@@ -81,15 +81,41 @@ def run():
 
     logger.info("RSI=%.1f, MACD=%.3f, BB=%s, EMA=%s", rsi, macd, bb_pos, ema)
 
-    # 3. News collection
+    # 3. News collection (yfinance + fallback to NewsCollector)
     logger.info("Collecting news...")
+    import re
+    import yfinance as yf
+    news_headlines = []  # For video display (title + detail)
+    news_items = []      # For backward compat
+
     try:
-        collector = NewsCollector(lookback_hours=24)
-        news_items = collector.fetch_for_symbol(symbol, max_items=5)
-        news_text = "\n".join(f"- {n.title}" for n in news_items[:3]) if news_items else ""
-    except Exception:
-        news_items = []
-        news_text = ""
+        ticker_obj = yf.Ticker(symbol)
+        yf_news = ticker_obj.news or []
+        for n in yf_news[:8]:
+            content = n.get("content", {})
+            title = content.get("title", "")
+            desc_html = content.get("description", "")
+            desc = re.sub(r"<[^>]+>", "", desc_html).strip()
+            # Only keep articles that mention this symbol or company name
+            full_text = f"{title} {desc}".lower()
+            if symbol.lower() in full_text or (company_name_ko and company_name_ko.lower() in full_text):
+                # Build detailed headline
+                if desc and len(desc) > 30:
+                    news_headlines.append(f"{title}\n{desc[:200]}")
+                else:
+                    news_headlines.append(title)
+        logger.info("yfinance news: %d relevant articles", len(news_headlines))
+    except Exception as e:
+        logger.warning("yfinance news fetch failed: %s", e)
+
+    # Fallback to NewsCollector if yfinance had no results
+    if not news_headlines:
+        try:
+            collector = NewsCollector(lookback_hours=48)
+            news_items = collector.fetch_for_symbol(symbol, max_items=5)
+            news_headlines = [f"{n.title}\n{n.summary[:150]}" if n.summary else n.title for n in news_items[:4]]
+        except Exception:
+            pass
 
     # 4. Template-based content generation (no ANTHROPIC_API_KEY needed)
     direction = hot.direction
@@ -111,16 +137,28 @@ def run():
     )
 
     tts_name = company_name_ko if company_name_ko else symbol
+
+    # Build news narration for TTS
+    news_narration = ""
+    if news_headlines:
+        # Extract just the first headline's title for narration
+        first_news = news_headlines[0].split("\n")[0]
+        news_narration = f" 주요 뉴스를 보면, {first_news}."
+        if len(news_headlines) > 1:
+            second_news = news_headlines[1].split("\n")[0]
+            news_narration += f" 또한, {second_news}."
+
     script = (
-        f"오늘 {tts_name}이 {abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}했습니다. "
-        f"RSI는 {rsi:.0f}으로 {rsi_label_ko} 구간에 진입했고, "
+        f"오늘 {tts_name}이 {abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}했습니다."
+        f"{news_narration} "
+        f"기술적 분석을 보면, RSI는 {rsi:.0f}으로 {rsi_label_ko} 구간이고, "
         f"MACD는 {macd_label_ko}를 보이고 있습니다. "
         f"거래량은 20일 평균 대비 {vol_ratio:.1f}배 급증했습니다. "
         f"{'이번 하락이 매수 기회가 될지, 추가 하락이 이어질지 주목됩니다.' if change_pct < 0 else '이 상승세가 지속될 수 있을지 주목됩니다.'}"
         f" 본 콘텐츠는 투자 조언이 아닙니다."
     )
 
-    news_summary = "\n".join(f"- {n.title}" for n in news_items[:3]) if news_items else ""
+    news_summary = "\n".join(f"- {h.split(chr(10))[0]}" for h in news_headlines[:3]) if news_headlines else ""
     rsi_outlook = (
         "RSI 과매도 접근 — 반등 가능 구간입니다." if rsi <= 35
         else ("RSI 과매수 영역 — 조정 가능성에 유의하세요." if rsi >= 65
@@ -181,7 +219,7 @@ def run():
         ),
         chart_data=chart_data,
         company_name_ko=company_name_ko,
-        news_headlines=[n.title for n in news_items[:4]] if news_items else [],
+        news_headlines=news_headlines[:4],
     )
 
     logger.info("Content generated: %s", card_title)

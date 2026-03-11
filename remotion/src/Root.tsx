@@ -8,7 +8,7 @@ export const RemotionRoot: React.FC = () => {
       id="StockShort"
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       component={StockShort as any}
-      durationInFrames={900}
+      durationInFrames={1350}
       fps={30}
       width={1080}
       height={1920}
