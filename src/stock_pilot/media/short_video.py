@@ -44,7 +44,7 @@ def generate_short_video(
         str(output_path),
         "--props", json.dumps(props),
         "--codec", "h264",
-        "--crf", "23",
+        "--crf", "18",
     ]
 
     try:
