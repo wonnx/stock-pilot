@@ -169,16 +169,10 @@ def run():
         f"{abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}."
     )
 
-    # S2 News (5-17s): reads the news headlines shown on screen
+    # S2 News (5-17s): reads only titles shown on screen (no detail text)
     if news_headlines:
-        news_parts = []
-        for i, h in enumerate(news_headlines[:3]):
-            title = h.split("\n")[0]
-            detail = h.split("\n")[1] if "\n" in h else ""
-            news_parts.append(f"{i+1}번. {title}.")
-            if detail:
-                news_parts.append(detail[:80])
-        seg_news = f"{'급등' if change_pct > 0 else '급락'} 배경. " + " ".join(news_parts)
+        titles_only = [h.split("\n")[0] for h in news_headlines[:3]]
+        seg_news = f"{'급등' if change_pct > 0 else '급락'} 배경. " + " ".join(f"{i+1}번. {t}." for i, t in enumerate(titles_only))
     else:
         seg_news = f"{'시장 전반의 매수세가 주요 요인으로 분석됩니다.' if change_pct > 0 else '시장 전반의 매도 압력이 주요 원인으로 분석됩니다.'}"
 
