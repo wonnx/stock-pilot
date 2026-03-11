@@ -316,11 +316,14 @@ const Scene: React.FC<{
   const slideExit = exitProgress * -60 * slideDir;
   const translateY = slideEnter + slideExit;
 
+  if (opacity < 0.01) return null;
+
   return (
     <div style={{
       position: 'absolute', inset: 0,
       opacity,
       transform: `translateY(${translateY}px)`,
+      background: BG,
       pointerEvents: opacity < 0.05 ? 'none' : 'auto',
     }}>
       {children}
@@ -416,13 +419,14 @@ export const StockShort: React.FC<Props> = ({
   // Scene3: 12-23s (360-690f) — Indicators
   // Scene4: 22-30s (660-900f) — Conclusion
 
+  // Scene timing — no overlap: exit finishes before next enter starts
   const S1_ENTER = 0;
-  const S1_EXIT = fps * 4.5;
-  const S2_ENTER = fps * 4;
-  const S2_EXIT = fps * 12.5;
-  const S3_ENTER = fps * 12;
-  const S3_EXIT = fps * 22.5;
-  const S4_ENTER = fps * 22;
+  const S1_EXIT = fps * 4;      // exit anim 0.5s → done by 4.5s
+  const S2_ENTER = fps * 5;     // enters at 5s (after S1 fully gone)
+  const S2_EXIT = fps * 12;     // exit anim 0.5s → done by 12.5s
+  const S3_ENTER = fps * 13;    // enters at 13s
+  const S3_EXIT = fps * 22;     // exit anim 0.5s → done by 22.5s
+  const S4_ENTER = fps * 23;    // enters at 23s
 
   const accentColor = changePct > 0 ? GREEN : changePct < 0 ? RED : YELLOW;
   const sign = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '■';
@@ -571,9 +575,21 @@ export const StockShort: React.FC<Props> = ({
             width: '60%',
           }} />
 
+          {/* Interpretation */}
+          <div style={{
+            marginTop: 32, fontSize: 24, color: DIM, lineHeight: 1.8,
+            background: SURFACE, border: `1px solid ${BORDER}`,
+            borderRadius: 16, padding: '20px 24px',
+          }}>
+            {changePct > 0
+              ? `${symbol} surged ${Math.abs(changePct).toFixed(1)}% today with ${emaTrend === 'bullish' ? 'strong upward' : 'mixed'} momentum. Volume at ${volumeRatio.toFixed(1)}x average signals ${volumeRatio >= 2 ? 'high conviction' : 'moderate'} participation.`
+              : `${symbol} dropped ${Math.abs(changePct).toFixed(1)}% today with ${emaTrend === 'bearish' ? 'continued downward' : 'uncertain'} pressure. Volume at ${volumeRatio.toFixed(1)}x average indicates ${volumeRatio >= 2 ? 'heavy selling' : 'moderate'} activity.`
+            }
+          </div>
+
           {/* Ticker info */}
           <div style={{
-            marginTop: 24, fontSize: 22, color: DIM, lineHeight: 2,
+            marginTop: 16, fontSize: 22, color: DIM, lineHeight: 2,
           }}>
             <span style={{ color: GRAY, marginRight: 16 }}>NASDAQ</span>
             Real-time Market Analysis
@@ -652,6 +668,20 @@ export const StockShort: React.FC<Props> = ({
               </div>
             </div>
           )}
+
+          {/* Chart interpretation */}
+          <div style={{
+            marginTop: 20, fontSize: 22, color: DIM, lineHeight: 1.7,
+            background: `${accentColor}08`, border: `1px solid ${accentColor}25`,
+            borderRadius: 14, padding: '16px 20px',
+          }}>
+            {(() => {
+              if (chartData.length < 2) return 'Insufficient data for trend analysis.';
+              const pctChange20d = ((chartData[chartData.length - 1] / chartData[0]) - 1) * 100;
+              const trend = pctChange20d > 5 ? 'strong uptrend' : pctChange20d > 0 ? 'mild uptrend' : pctChange20d > -5 ? 'mild downtrend' : 'sharp decline';
+              return `The 20-day chart shows a ${trend} (${pctChange20d > 0 ? '+' : ''}${pctChange20d.toFixed(1)}%). ${pctChange20d > 5 ? 'Bulls remain in control — watch for resistance.' : pctChange20d > 0 ? 'Gradual recovery — key support levels holding.' : pctChange20d > -5 ? 'Slight weakness — monitor for breakdown below support.' : 'Significant selloff — look for stabilization before entry.'}`;
+            })()}
+          </div>
         </div>
       </Scene>
 
@@ -682,22 +712,30 @@ export const StockShort: React.FC<Props> = ({
           <div style={{ display: 'flex', gap: 16 }}>
             <MetricBadge
               label="MACD"
-              value={macdBullish ? 'Golden Cross ↑' : 'Death Cross ↓'}
+              value={macdBullish ? 'Golden Cross' : 'Death Cross'}
               color={macdColor}
-              icon="📊"
             />
             <MetricBadge
               label="Bollinger"
               value={`${bbLabel}`}
               color={bbColor}
-              icon="📉"
             />
             <MetricBadge
               label="Volume"
               value={`${animatedVol.toFixed(1)}x`}
               color={animatedVol >= 2 ? RED : animatedVol >= 1.5 ? YELLOW : GREEN}
-              icon="📦"
             />
+          </div>
+
+          {/* Indicator interpretation */}
+          <div style={{
+            marginTop: 24, fontSize: 22, color: DIM, lineHeight: 1.7,
+            background: SURFACE2, border: `1px solid ${BORDER}`,
+            borderRadius: 14, padding: '16px 20px',
+          }}>
+            {`RSI at ${rsi.toFixed(0)} — ${rsi >= 70 ? 'overbought territory, pullback risk is elevated' : rsi <= 30 ? 'oversold territory, a rebound may be near' : 'neutral zone, no extreme signal'}. `}
+            {`MACD shows a ${macdBullish ? 'golden cross (bullish crossover), suggesting upward momentum' : 'death cross (bearish crossover), indicating downward pressure'}. `}
+            {`Volume at ${volumeRatio.toFixed(1)}x average ${volumeRatio >= 2 ? 'confirms strong conviction behind the move' : 'shows moderate participation'}.`}
           </div>
         </div>
       </Scene>
@@ -767,7 +805,7 @@ export const StockShort: React.FC<Props> = ({
             marginTop: 48, textAlign: 'center',
             fontSize: 30, fontWeight: 700, color: WHITE,
           }}>
-            Follow @stock.snap for daily analysis 📈
+            Follow @stock.snap for daily analysis
           </div>
         </div>
       </Scene>
