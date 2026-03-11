@@ -423,16 +423,16 @@ export const StockShort: React.FC<Props> = ({
   // Scene3: 12-23s (360-690f) — Indicators
   // Scene4: 22-30s (660-900f) — Conclusion
 
-  // Scene timing — 5 scenes, no overlap
-  const S1_ENTER = 0;            // Hero: 0-4s
-  const S1_EXIT = fps * 3.5;
-  const S2_ENTER = fps * 4;      // News: 4-10s
-  const S2_EXIT = fps * 9.5;
-  const S3_ENTER = fps * 10;     // Chart: 10-16s
-  const S3_EXIT = fps * 15.5;
-  const S4_ENTER = fps * 16;     // Indicators: 16-23s
-  const S4_EXIT = fps * 22.5;
-  const S5_ENTER = fps * 23;     // Conclusion: 23-30s
+  // Scene timing — 5 scenes, 45s total, no overlap
+  const S1_ENTER = 0;            // Hero: 0-5s
+  const S1_EXIT = fps * 4.5;
+  const S2_ENTER = fps * 5;      // News: 5-17s (12s for detailed reading)
+  const S2_EXIT = fps * 16.5;
+  const S3_ENTER = fps * 17;     // Chart: 17-26s
+  const S3_EXIT = fps * 25.5;
+  const S4_ENTER = fps * 26;     // Indicators: 26-37s
+  const S4_EXIT = fps * 36.5;
+  const S5_ENTER = fps * 37;     // Conclusion: 37-45s
 
   const accentColor = changePct > 0 ? GREEN : changePct < 0 ? RED : YELLOW;
   const sign = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '■';
@@ -632,24 +632,36 @@ export const StockShort: React.FC<Props> = ({
 
           {/* News items */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {newsHeadlines.length > 0 ? newsHeadlines.slice(0, 4).map((headline, i) => (
-              <div key={i} style={{
-                background: SURFACE,
-                border: `1px solid ${BORDER}`,
-                borderRadius: 16, padding: '24px 28px',
-                display: 'flex', gap: 16, alignItems: 'flex-start',
-              }}>
-                <div style={{
-                  minWidth: 36, height: 36, borderRadius: 8,
-                  background: `${accentColor}20`, border: `1px solid ${accentColor}40`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 20, fontWeight: 800, color: accentColor,
-                }}>{i + 1}</div>
-                <div style={{ fontSize: 26, color: WHITE, lineHeight: 1.5, fontWeight: 500 }}>
-                  {headline}
+            {newsHeadlines.length > 0 ? newsHeadlines.slice(0, 3).map((headline, i) => {
+              const parts = headline.split('\n');
+              const title = parts[0];
+              const detail = parts.slice(1).join(' ').trim();
+              return (
+                <div key={i} style={{
+                  background: SURFACE,
+                  border: `1px solid ${BORDER}`,
+                  borderRadius: 16, padding: '24px 28px',
+                  display: 'flex', gap: 16, alignItems: 'flex-start',
+                }}>
+                  <div style={{
+                    minWidth: 36, height: 36, borderRadius: 8,
+                    background: `${accentColor}20`, border: `1px solid ${accentColor}40`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 20, fontWeight: 800, color: accentColor,
+                  }}>{i + 1}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ fontSize: 26, color: WHITE, lineHeight: 1.4, fontWeight: 700 }}>
+                      {title}
+                    </div>
+                    {detail && (
+                      <div style={{ fontSize: 22, color: DIM, lineHeight: 1.5, fontWeight: 400 }}>
+                        {detail}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )) : (
+              );
+            }) : (
               <div style={{
                 background: SURFACE,
                 border: `1px solid ${BORDER}`,
@@ -880,7 +892,7 @@ export const StockShort: React.FC<Props> = ({
 
       {/* Subtitle overlay */}
       {script && (
-        <SubtitleOverlay script={script} frame={frame} totalFrames={fps * 30} />
+        <SubtitleOverlay script={script} frame={frame} totalFrames={fps * 45} />
       )}
 
     </AbsoluteFill>
