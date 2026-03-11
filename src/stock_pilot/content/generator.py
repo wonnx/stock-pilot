@@ -88,7 +88,7 @@ Quant Analysis:
 - Pivot Points: P={tech.pivot:.2f} / R1={tech.pivot_r1:.2f} / S1={tech.pivot_s1:.2f}
 - Support: {tech.support:.2f} / Resistance: {tech.resistance:.2f}"""
 
-        prompt = f"""You are a quant analyst and content creator for a professional finance short-form channel.
+        prompt = f"""You are a professional financial analyst and content creator for a finance short-form channel.
 
 Stock Info:
 - Symbol: {symbol}
@@ -102,17 +102,17 @@ Stock Info:
 
 Generate content in the following JSON format (pure JSON, no markdown):
 {{
-  "script": "30-second short-form video narration (under 200 chars). Natural, impactful English. Mention quant indicators naturally. Include 1-2 line forecast at the end. Minimize AI-like tone. End with 'This content is not investment advice.'",
+  "script": "30-second short-form video narration (under 200 chars). Natural, impactful English. Mention technical indicators naturally. Include 1-2 line forecast at the end. Minimize AI-like tone. End with 'This content is not investment advice.'",
   "card_title": "Card news headline (under 15 words, impactful)",
   "card_subtitle": "Subtitle (under 30 words, core reason)",
-  "card_body": "Card news body, 3 lines. Focus on numbers and facts. Include quant indicators.",
-  "caption": "Social media post (Instagram/YouTube). Use emojis appropriately. Combine news analysis + quant outlook in detail (6-8 lines). Include 5 relevant hashtags. End with 'This content is not investment advice.'",
-  "quant_summary": "2-3 line quant perspective summary. RSI overbought/oversold, MACD trend, Bollinger Band position, MA alignment — professional analysis.",
+  "card_body": "Card news body, 3 lines. Focus on numbers and facts. Include key indicators.",
+  "caption": "Social media post (Instagram/YouTube). No emojis. Professional tone. Combine news analysis + technical outlook in detail (6-8 lines). Include 5 relevant hashtags. End with 'This content is not investment advice.'",
+  "quant_summary": "2-3 line technical perspective summary. RSI overbought/oversold, MACD trend, Bollinger Band position, MA alignment — professional analysis.",
   "forecast": "Short-term outlook (1-2 lines, for video ending). Technical indicator-based direction. Use cautious language like 'likely to...', 'watch for...'. No investment advice.",
   "forecast_detail": "Detailed outlook (3-5 lines, for caption). Technical basis (SMA/EMA/RSI/pivot) + news flow + short-term scenarios (bull/bear). Professional, cautious tone. No investment advice."
 }}
 
-Write in a professional, impactful finance channel style."""
+Write in a professional, impactful finance channel style. Do not use emojis anywhere."""
 
         try:
             client = self._get_client()

@@ -102,19 +102,19 @@ def run():
     )
 
     caption = (
-        f"{'📉' if change_pct < 0 else '📈'} ${symbol} {arrow}{abs(change_pct):.1f}% "
+        f"${symbol} {arrow}{abs(change_pct):.1f}% "
         f"{'plunge' if change_pct < 0 else 'surge'}!\n\n"
-        f"📊 Quant Analysis:\n"
-        f"• Price: ${price:,.2f} ({sign}{abs(change_pct):.2f}%)\n"
-        f"• RSI {rsi:.0f} ({rsi_label}) | MACD: {macd_label}\n"
-        f"• Volume: {vol_ratio:.1f}x 20-day average spike\n"
-        f"• Bollinger: {bb_pos} | EMA Trend: {ema}\n\n"
-        + (f"📰 Key News:\n{news_summary}\n\n" if news_summary else "")
-        + f"🔮 Short-term Outlook:\n"
+        f"[Technical Analysis]\n"
+        f"- Price: ${price:,.2f} ({sign}{abs(change_pct):.2f}%)\n"
+        f"- RSI {rsi:.0f} ({rsi_label}) | MACD: {macd_label}\n"
+        f"- Volume: {vol_ratio:.1f}x 20-day average spike\n"
+        f"- Bollinger: {bb_pos} | EMA Trend: {ema}\n\n"
+        + (f"[Key News]\n{news_summary}\n\n" if news_summary else "")
+        + f"[Short-term Outlook]\n"
         f"{'Monitor for continued downside pressure.' if change_pct < 0 else 'Monitor for resistance levels.'} "
         f"{rsi_outlook}\n\n"
         f"#{symbol} #stocks #USstocks #stockmarket #investing #shorts\n"
-        f"⚠️ This content is not investment advice."
+        f"This content is not investment advice."
     )
 
     quant_summary = f"RSI {rsi:.0f}({rsi_label}), MACD {macd_label}, BB {bb_pos}, EMA {ema}"
