@@ -36,6 +36,10 @@ class ContentPackage:
     forecast_detail: str = ""    # Detailed forecast for caption (3-5 lines)
     # Chart data points (last 20 days close prices, for Remotion animation)
     chart_data: list[float] = field(default_factory=list)
+    # Korean company name for display
+    company_name_ko: str = ""
+    # News headlines explaining the move
+    news_headlines: list[str] = field(default_factory=list)
 
 
 class ContentGenerator:
