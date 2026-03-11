@@ -13,3 +13,36 @@ htmlcov/
 *.db
 *.sqlite
 data/cache/
+
+# Generated media output
+output/
+remotion/output/
+remotion/public/*.mp3
+remotion/public/*.mp4
+remotion/public/*.wav
+remotion/public/*.jpg
+remotion/public/*.png
+remotion/public/profiles/
+remotion/public/tts_samples/
+remotion/public/tts_samples_v2/
+remotion/public/bgm_samples/
+remotion/public/bgm_v2/
+
+# Node.js dependencies
+node_modules/
+remotion/node_modules/
+package-lock.json
+remotion/package-lock.json
+
+# Root package.json (auto-generated, not source)
+package.json
+
+# Lock files
+uv.lock
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log

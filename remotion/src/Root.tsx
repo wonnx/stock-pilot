@@ -2,6 +2,11 @@ import React from 'react';
 import { Composition } from 'remotion';
 import { StockShort, calculateMetadata } from './StockShort';
 import { StockThumbnail } from './StockThumbnail';
+import { InstagramProfile } from './InstagramProfile';
+import {
+  ProfileSample01, ProfileSample02, ProfileSample03, ProfileSample04, ProfileSample05,
+  ProfileSample06, ProfileSample07, ProfileSample08, ProfileSample09, ProfileSample10,
+} from './ProfileSamples';
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -66,6 +71,30 @@ export const RemotionRoot: React.FC = () => {
           companyNameKo: '애플',
         }}
       />
+      <Composition
+        id="InstagramProfile"
+        component={InstagramProfile}
+        durationInFrames={1}
+        fps={30}
+        width={640}
+        height={640}
+        defaultProps={{}}
+      />
+      {([
+        ProfileSample01, ProfileSample02, ProfileSample03, ProfileSample04, ProfileSample05,
+        ProfileSample06, ProfileSample07, ProfileSample08, ProfileSample09, ProfileSample10,
+      ] as React.FC[]).map((Comp, i) => (
+        <Composition
+          key={i + 1}
+          id={`ProfileSample${String(i + 1).padStart(2, '0')}`}
+          component={Comp}
+          durationInFrames={1}
+          fps={30}
+          width={640}
+          height={640}
+          defaultProps={{}}
+        />
+      ))}
     </>
   );
 };
