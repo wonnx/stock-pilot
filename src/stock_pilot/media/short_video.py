@@ -58,6 +58,7 @@ def generate_short_video(
         "--scale", "1",
         "--image-format", "jpeg",
         "--jpeg-quality", "100",
+        "--enforce-audio-track",
     ]
 
     try:

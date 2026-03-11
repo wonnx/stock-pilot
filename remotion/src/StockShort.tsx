@@ -211,7 +211,7 @@ const AdvancedChart: React.FC<{
 // ─── RSI gauge ──────────────────────────────────────────────────────────────
 const RsiGauge: React.FC<{ rsi: number; animatedRsi: number }> = ({ rsi, animatedRsi }) => {
   const color = rsi >= 70 ? RED : rsi <= 30 ? GREEN : YELLOW;
-  const label = rsi >= 70 ? 'Overbought' : rsi <= 30 ? 'Oversold' : 'Neutral';
+  const label = rsi >= 70 ? '과매수' : rsi <= 30 ? '과매도' : '중립';
   const pct = Math.min(Math.max(animatedRsi / 100, 0), 1);
 
   // 30/70 zone display
@@ -248,9 +248,9 @@ const RsiGauge: React.FC<{ rsi: number; animatedRsi: number }> = ({ rsi, animate
         <div style={{ position: 'absolute', left: '70%', top: -4, bottom: -4, width: 1, background: `${RED}80` }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 18, color: GRAY }}>
-        <span style={{ color: GREEN }}>30 Oversold</span>
+        <span style={{ color: GREEN }}>30 과매도</span>
         <span>50</span>
-        <span style={{ color: RED }}>70 Overbought</span>
+        <span style={{ color: RED }}>70 과매수</span>
       </div>
     </div>
   );
@@ -440,9 +440,9 @@ export const StockShort: React.FC<Props> = ({
   const macdBullish = macd > macdSignal;
   const macdColor = macdBullish ? GREEN : RED;
   const bbColor = bbPosition === 'upper' ? RED : bbPosition === 'lower' ? GREEN : YELLOW;
-  const bbLabel = bbPosition === 'upper' ? 'Upper Break' : bbPosition === 'lower' ? 'Lower Support' : 'Mid Band';
+  const bbLabel = bbPosition === 'upper' ? '상단 돌파' : bbPosition === 'lower' ? '하단 지지' : '중간대';
   const emaTrendColor = emaTrend === 'bullish' ? GREEN : emaTrend === 'bearish' ? RED : YELLOW;
-  const emaTrendLabel = emaTrend === 'bullish' ? '▲ Bullish' : emaTrend === 'bearish' ? '▼ Bearish' : '◆ Mixed';
+  const emaTrendLabel = emaTrend === 'bullish' ? '▲ 상승' : emaTrend === 'bearish' ? '▼ 하락' : '◆ 혼조';
 
   // Scene1 internal animations
   const symbolSpring = spring({ frame, fps, from: 0, to: 1, config: { damping: 14, stiffness: 70 } });
@@ -459,9 +459,9 @@ export const StockShort: React.FC<Props> = ({
       overflow: 'hidden',
     }}>
 
-      {audioPath && (
-        <Audio src={staticFile(audioPath)} />
-      )}
+      {audioPath ? (
+        <Audio src={staticFile(audioPath)} volume={1} />
+      ) : null}
 
       {/* Background glow */}
       <div style={{
@@ -505,7 +505,7 @@ export const StockShort: React.FC<Props> = ({
         fontSize: 18, color: `${GRAY}88`,
         zIndex: 100,
       }}>
-        This content is not investment advice. Invest at your own risk.
+        본 콘텐츠는 투자 조언이 아닙니다. 투자의 책임은 본인에게 있습니다.
       </div>
 
       {/* ══ Scene1: Hero — Symbol + Price ══════════════════════════════════════════ */}
@@ -582,8 +582,8 @@ export const StockShort: React.FC<Props> = ({
             borderRadius: 16, padding: '20px 24px',
           }}>
             {changePct > 0
-              ? `${symbol} surged ${Math.abs(changePct).toFixed(1)}% today with ${emaTrend === 'bullish' ? 'strong upward' : 'mixed'} momentum. Volume at ${volumeRatio.toFixed(1)}x average signals ${volumeRatio >= 2 ? 'high conviction' : 'moderate'} participation.`
-              : `${symbol} dropped ${Math.abs(changePct).toFixed(1)}% today with ${emaTrend === 'bearish' ? 'continued downward' : 'uncertain'} pressure. Volume at ${volumeRatio.toFixed(1)}x average indicates ${volumeRatio >= 2 ? 'heavy selling' : 'moderate'} activity.`
+              ? `${symbol}이 오늘 ${Math.abs(changePct).toFixed(1)}% 급등했습니다. ${emaTrend === 'bullish' ? '강한 상승' : '혼조'} 모멘텀과 함께 거래량이 평균 대비 ${volumeRatio.toFixed(1)}배로 ${volumeRatio >= 2 ? '높은 확신' : '보통 수준'}의 참여를 보이고 있습니다.`
+              : `${symbol}이 오늘 ${Math.abs(changePct).toFixed(1)}% 급락했습니다. ${emaTrend === 'bearish' ? '지속적인 하방' : '불확실한'} 압력과 함께 거래량이 평균 대비 ${volumeRatio.toFixed(1)}배로 ${volumeRatio >= 2 ? '강한 매도세' : '보통 수준'}의 활동을 보이고 있습니다.`
             }
           </div>
 
@@ -592,7 +592,7 @@ export const StockShort: React.FC<Props> = ({
             marginTop: 16, fontSize: 22, color: DIM, lineHeight: 2,
           }}>
             <span style={{ color: GRAY, marginRight: 16 }}>NASDAQ</span>
-            Real-time Market Analysis
+            실시간 시장 분석
           </div>
         </div>
       </Scene>
@@ -606,12 +606,12 @@ export const StockShort: React.FC<Props> = ({
           padding: '100px 60px',
         }}>
           <div style={{ fontSize: 32, fontWeight: 700, color: DIM, marginBottom: 8 }}>
-            Price History
+            가격 추이
           </div>
           <div style={{
             fontSize: 52, fontWeight: 900, color: WHITE, marginBottom: 40,
           }}>
-            Last 20 Trading Days
+            최근 20거래일
           </div>
 
           {/* Chart card */}
@@ -639,7 +639,7 @@ export const StockShort: React.FC<Props> = ({
                 flex: 1, background: SURFACE2, border: `1px solid ${BORDER}`,
                 borderRadius: 16, padding: '20px 24px', textAlign: 'center',
               }}>
-                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>20d ago</div>
+                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>20일 전</div>
                 <div style={{ fontSize: 38, fontWeight: 800, color: WHITE, fontVariantNumeric: 'tabular-nums' }}>
                   ${chartData[0].toFixed(2)}
                 </div>
@@ -649,7 +649,7 @@ export const StockShort: React.FC<Props> = ({
                 borderRadius: 16, padding: '20px 24px', textAlign: 'center',
                 boxShadow: `0 0 24px ${accentColor}15`,
               }}>
-                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>Current</div>
+                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>현재가</div>
                 <div style={{ fontSize: 38, fontWeight: 800, color: accentColor, fontVariantNumeric: 'tabular-nums' }}>
                   ${chartData[chartData.length - 1].toFixed(2)}
                 </div>
@@ -658,7 +658,7 @@ export const StockShort: React.FC<Props> = ({
                 flex: 1, background: SURFACE2, border: `1px solid ${BORDER}`,
                 borderRadius: 16, padding: '20px 24px', textAlign: 'center',
               }}>
-                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>20d Change</div>
+                <div style={{ fontSize: 20, color: GRAY, marginBottom: 8 }}>20일 변동</div>
                 <div style={{
                   fontSize: 38, fontWeight: 800, fontVariantNumeric: 'tabular-nums',
                   color: chartData[chartData.length - 1] > chartData[0] ? GREEN : RED,
@@ -676,10 +676,10 @@ export const StockShort: React.FC<Props> = ({
             borderRadius: 14, padding: '16px 20px',
           }}>
             {(() => {
-              if (chartData.length < 2) return 'Insufficient data for trend analysis.';
+              if (chartData.length < 2) return '추세 분석을 위한 데이터가 부족합니다.';
               const pctChange20d = ((chartData[chartData.length - 1] / chartData[0]) - 1) * 100;
-              const trend = pctChange20d > 5 ? 'strong uptrend' : pctChange20d > 0 ? 'mild uptrend' : pctChange20d > -5 ? 'mild downtrend' : 'sharp decline';
-              return `The 20-day chart shows a ${trend} (${pctChange20d > 0 ? '+' : ''}${pctChange20d.toFixed(1)}%). ${pctChange20d > 5 ? 'Bulls remain in control — watch for resistance.' : pctChange20d > 0 ? 'Gradual recovery — key support levels holding.' : pctChange20d > -5 ? 'Slight weakness — monitor for breakdown below support.' : 'Significant selloff — look for stabilization before entry.'}`;
+              const trend = pctChange20d > 5 ? '강한 상승추세' : pctChange20d > 0 ? '완만한 상승' : pctChange20d > -5 ? '완만한 하락' : '급격한 하락';
+              return `20일 차트에서 ${trend} (${pctChange20d > 0 ? '+' : ''}${pctChange20d.toFixed(1)}%)가 관찰됩니다. ${pctChange20d > 5 ? '매수세가 우위 — 저항선 돌파 여부를 주목하세요.' : pctChange20d > 0 ? '점진적 회복 중 — 주요 지지선이 유지되고 있습니다.' : pctChange20d > -5 ? '약세 지속 — 지지선 이탈 여부를 모니터링하세요.' : '큰 폭의 매도세 — 안정화 확인 후 진입을 검토하세요.'}`;
             })()}
           </div>
         </div>
@@ -694,10 +694,10 @@ export const StockShort: React.FC<Props> = ({
           padding: '100px 60px',
         }}>
           <div style={{ fontSize: 32, fontWeight: 700, color: DIM, marginBottom: 8 }}>
-            Technical Analysis
+            기술적 분석
           </div>
           <div style={{ fontSize: 52, fontWeight: 900, color: WHITE, marginBottom: 40 }}>
-            Key Indicators
+            핵심 지표
           </div>
 
           {/* RSI card */}
@@ -712,16 +712,16 @@ export const StockShort: React.FC<Props> = ({
           <div style={{ display: 'flex', gap: 16 }}>
             <MetricBadge
               label="MACD"
-              value={macdBullish ? 'Golden Cross' : 'Death Cross'}
+              value={macdBullish ? '골든크로스' : '데드크로스'}
               color={macdColor}
             />
             <MetricBadge
-              label="Bollinger"
+              label="볼린저밴드"
               value={`${bbLabel}`}
               color={bbColor}
             />
             <MetricBadge
-              label="Volume"
+              label="거래량"
               value={`${animatedVol.toFixed(1)}x`}
               color={animatedVol >= 2 ? RED : animatedVol >= 1.5 ? YELLOW : GREEN}
             />
@@ -733,9 +733,9 @@ export const StockShort: React.FC<Props> = ({
             background: SURFACE2, border: `1px solid ${BORDER}`,
             borderRadius: 14, padding: '16px 20px',
           }}>
-            {`RSI at ${rsi.toFixed(0)} — ${rsi >= 70 ? 'overbought territory, pullback risk is elevated' : rsi <= 30 ? 'oversold territory, a rebound may be near' : 'neutral zone, no extreme signal'}. `}
-            {`MACD shows a ${macdBullish ? 'golden cross (bullish crossover), suggesting upward momentum' : 'death cross (bearish crossover), indicating downward pressure'}. `}
-            {`Volume at ${volumeRatio.toFixed(1)}x average ${volumeRatio >= 2 ? 'confirms strong conviction behind the move' : 'shows moderate participation'}.`}
+            {`RSI ${rsi.toFixed(0)} — ${rsi >= 70 ? '과매수 구간으로 조정 위험이 높습니다' : rsi <= 30 ? '과매도 구간으로 반등 가능성이 있습니다' : '중립 구간으로 극단적 신호는 없습니다'}. `}
+            {`MACD는 ${macdBullish ? '골든크로스(매수 신호)로 상승 모멘텀을 시사합니다' : '데드크로스(매도 신호)로 하방 압력을 나타냅니다'}. `}
+            {`거래량은 평균 대비 ${volumeRatio.toFixed(1)}배로 ${volumeRatio >= 2 ? '강한 확신을 동반한 움직임입니다' : '보통 수준의 참여를 보이고 있습니다'}.`}
           </div>
         </div>
       </Scene>
@@ -756,7 +756,7 @@ export const StockShort: React.FC<Props> = ({
             boxShadow: `0 0 80px ${accentColor}20`,
           }}>
             <div style={{ fontSize: 28, color: accentColor, fontWeight: 600, marginBottom: 16 }}>
-              Today's Analysis
+              오늘의 분석
             </div>
             <div style={{ fontSize: 56, fontWeight: 900, color: WHITE, lineHeight: 1.2, marginBottom: 24 }}>
               {cardTitle}
@@ -805,7 +805,7 @@ export const StockShort: React.FC<Props> = ({
             marginTop: 48, textAlign: 'center',
             fontSize: 30, fontWeight: 700, color: WHITE,
           }}>
-            Follow @stock.snap for daily analysis
+            @stock.snap 팔로우하고 매일 분석 받기
           </div>
         </div>
       </Scene>
