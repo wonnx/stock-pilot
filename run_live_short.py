@@ -340,12 +340,13 @@ def run():
         [f"{s:.1f}s" for s in scene_secs], total_secs, total_frames,
     )
 
-    # 4d. BGM setup (WAV — Remotion supports WAV natively)
-    from stock_pilot.media.bgm import ensure_bgm
-    bgm_path = output_dir / "bgm_lofi.wav"
-    bgm_ok = ensure_bgm(bgm_path, duration_secs=max(total_secs + 10, 120.0))
-    if not bgm_ok:
-        logger.warning("BGM not available — video will have no background music")
+    # 4d. BGM setup — Scott Buckley "Moonlight" (fixed BGM)
+    _MOONLIGHT_SRC = Path("/Users/jwkim/stock-pilot/output/bgm_v2/04_moonlight.mp3")
+    if _MOONLIGHT_SRC.exists():
+        bgm_path = _MOONLIGHT_SRC
+        logger.info("BGM: using Moonlight (%s)", bgm_path)
+    else:
+        logger.warning("BGM file not found at %s — video will have no background music", _MOONLIGHT_SRC)
         bgm_path = None
 
     logger.info("Rendering video (%.1fs, %d frames)...", total_secs, total_frames)
