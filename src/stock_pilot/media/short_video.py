@@ -68,6 +68,9 @@ def generate_short_video(
     audio_path: Path | None = None,
     audio_segment_paths: list[Path] | None = None,
     script_segments: list[str] | None = None,
+    bgm_path: Path | None = None,
+    total_frames: int = 1350,
+    scene_durations: list[int] | None = None,
 ) -> bool:
     """Render a short-form video via Remotion CLI. Returns True on success."""
     if not REMOTION_DIR.exists():
@@ -95,6 +98,14 @@ def generate_short_video(
         audio_prop = Path(audio_path).name
         logger.info("Copied audio to remotion/public/%s", audio_prop)
 
+    # Copy BGM file to Remotion public dir
+    bgm_name = ""
+    if bgm_path and Path(bgm_path).exists():
+        dest = public_dir / Path(bgm_path).name
+        shutil.copy2(bgm_path, dest)
+        bgm_name = Path(bgm_path).name
+        logger.info("Copied BGM to remotion/public/%s", bgm_name)
+
     props = {
         "symbol": pkg.symbol,
         "price": pkg.price,
@@ -118,6 +129,11 @@ def generate_short_video(
         # Scene-synced audio and subtitles
         "audioSegments": audio_segment_names,
         "scriptSegments": script_segments or [],
+        # BGM
+        "bgmPath": bgm_name,
+        # Dynamic duration
+        "totalFrames": total_frames,
+        "sceneDurations": scene_durations or [],
     }
 
     cmd = [
