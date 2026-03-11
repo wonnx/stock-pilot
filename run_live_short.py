@@ -132,9 +132,9 @@ def run():
 
     from datetime import datetime
     import pytz
-    et = pytz.timezone("US/Eastern")
-    now_et = datetime.now(et)
-    time_label = now_et.strftime("%Y년 %m월 %d일 %H:%M") + " (미국 동부시간) 기준"
+    kst = pytz.timezone("Asia/Seoul")
+    now_kst = datetime.now(kst)
+    time_label = now_kst.strftime("%Y년 %m월 %d일 %H:%M") + " (한국시간) 기준"
 
     caption = (
         f"${display_name} {arrow}{abs(change_pct):.1f}% "
