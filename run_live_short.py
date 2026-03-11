@@ -42,6 +42,27 @@ def run():
     symbol = hot.symbol
     logger.info("Selected: %s %+.2f%% (score %.1f)", symbol, hot.change_pct, hot.hot_score)
 
+    # Korean company name lookup
+    COMPANY_NAMES_KO = {
+        "AAPL": "애플", "MSFT": "마이크로소프트", "GOOGL": "구글", "GOOG": "구글",
+        "AMZN": "아마존", "META": "메타", "TSLA": "테슬라", "NVDA": "엔비디아",
+        "NFLX": "넷플릭스", "AMD": "AMD", "INTC": "인텔", "CRM": "세일즈포스",
+        "ORCL": "오라클", "ADBE": "어도비", "CSCO": "시스코", "QCOM": "퀄컴",
+        "AVGO": "브로드컴", "TXN": "텍사스인스트루먼트", "BNTX": "바이오엔텍",
+        "MRNA": "모더나", "PFE": "화이자", "JNJ": "존슨앤존슨", "UNH": "유나이티드헬스",
+        "V": "비자", "MA": "마스터카드", "JPM": "JP모건", "BAC": "뱅크오브아메리카",
+        "GS": "골드만삭스", "WMT": "월마트", "COST": "코스트코", "HD": "홈디포",
+        "DIS": "디즈니", "PYPL": "페이팔", "SQ": "블록", "COIN": "코인베이스",
+        "PLTR": "팔란티어", "UBER": "우버", "ABNB": "에어비앤비", "SNAP": "스냅",
+        "SHOP": "쇼피파이", "ROKU": "로쿠", "ZM": "줌", "DDOG": "데이터독",
+        "SNOW": "스노우플레이크", "NET": "클라우드플레어", "CRWD": "크라우드스트라이크",
+        "MU": "마이크론", "MRVL": "마벨", "SMCI": "슈퍼마이크로",
+        "ARM": "ARM홀딩스", "MSTR": "마이크로스트래티지", "SOFI": "소파이",
+        "NIO": "니오", "RIVN": "리비안", "LCID": "루시드", "LI": "리오토",
+        "BA": "보잉", "CAT": "캐터필러", "XOM": "엑슨모빌", "CVX": "셰브론",
+    }
+    company_name_ko = COMPANY_NAMES_KO.get(symbol, "")
+
     # 2. Quant analysis
     logger.info("Running quant analysis...")
     df = fetcher.get_ohlcv(symbol, period="3mo", interval="1d")
@@ -80,7 +101,8 @@ def run():
     rsi_label_ko = "과매수" if rsi >= 70 else ("과매도" if rsi <= 30 else "중립")
     macd_label_ko = "골든크로스" if macd > macd_signal else "데드크로스"
 
-    card_title = f"{symbol} {arrow}{abs(change_pct):.1f}% {'급등' if change_pct > 0 else '급락'}"
+    display_name = f"{company_name_ko}({symbol})" if company_name_ko else symbol
+    card_title = f"{display_name} {arrow}{abs(change_pct):.1f}% {'급등' if change_pct > 0 else '급락'}"
     card_subtitle = f"RSI {rsi_label_ko}({rsi:.0f}) | MACD {macd_label_ko}"
     card_body = (
         f"현재가: ${price:,.2f}\n"
@@ -88,8 +110,9 @@ def run():
         f"거래량: 평균 대비 {vol_ratio:.1f}배"
     )
 
+    tts_name = company_name_ko if company_name_ko else symbol
     script = (
-        f"오늘 {symbol}이 {abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}했습니다. "
+        f"오늘 {tts_name}이 {abs(change_pct):.1f}퍼센트 {'급등' if change_pct > 0 else '급락'}했습니다. "
         f"RSI는 {rsi:.0f}으로 {rsi_label_ko} 구간에 진입했고, "
         f"MACD는 {macd_label_ko}를 보이고 있습니다. "
         f"거래량은 20일 평균 대비 {vol_ratio:.1f}배 급증했습니다. "
@@ -108,7 +131,7 @@ def run():
     ema_label_ko = "상승추세" if ema == "bullish" else ("하락추세" if ema == "bearish" else "혼조")
 
     caption = (
-        f"${symbol} {arrow}{abs(change_pct):.1f}% "
+        f"${display_name} {arrow}{abs(change_pct):.1f}% "
         f"{'급락' if change_pct < 0 else '급등'}!\n\n"
         f"[기술적 분석]\n"
         f"- 현재가: ${price:,.2f} ({sign}{abs(change_pct):.2f}%)\n"
@@ -150,6 +173,8 @@ def run():
             f"{'지지선 확인 후 진입을 검토하세요.' if change_pct < 0 else '저항선 확인 후 추가 매수를 검토하세요.'}"
         ),
         chart_data=chart_data,
+        company_name_ko=company_name_ko,
+        news_headlines=[n.title for n in news_items[:4]] if news_items else [],
     )
 
     logger.info("Content generated: %s", card_title)

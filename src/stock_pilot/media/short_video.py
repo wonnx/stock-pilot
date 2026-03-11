@@ -46,6 +46,8 @@ def generate_short_video(
         "emaTrend": pkg.ema_trend,
         "quantSummary": pkg.quant_summary,
         "chartData": pkg.chart_data,
+        "companyNameKo": getattr(pkg, "company_name_ko", ""),
+        "newsHeadlines": getattr(pkg, "news_headlines", []),
     }
 
     cmd = [
@@ -54,10 +56,11 @@ def generate_short_video(
         str(output_path),
         "--props", json.dumps(props),
         "--codec", "h264",
-        "--crf", "15",
+        "--crf", "12",
         "--scale", "1",
-        "--image-format", "jpeg",
-        "--jpeg-quality", "100",
+        "--height", "1920",
+        "--width", "1080",
+        "--image-format", "png",
         "--enforce-audio-track",
     ]
 

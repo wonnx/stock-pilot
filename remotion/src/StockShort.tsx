@@ -28,6 +28,8 @@ interface Props {
   emaTrend?: string;        // "bullish" | "bearish" | "mixed"
   quantSummary?: string;
   chartData?: number[];     // last 20 days close
+  companyNameKo?: string;   // Korean company name (e.g. "바이오엔텍")
+  newsHeadlines?: string[]; // Top news headlines explaining the move
 }
 
 // ─── Color palette ────────────────────────────────────────────────────────────
@@ -337,9 +339,9 @@ const SubtitleOverlay: React.FC<{
   frame: number;
   totalFrames?: number;
 }> = ({ script, frame, totalFrames = 900 }) => {
-  // Split into sentences
+  // Split into sentences (supports Korean period and English punctuation)
   const sentences = script
-    .split(/(?<=[.!?])\s+/)
+    .split(/(?<=[.!?。])\s*/)
     .map(s => s.trim())
     .filter(Boolean);
 
@@ -362,7 +364,7 @@ const SubtitleOverlay: React.FC<{
   return (
     <div style={{
       position: 'absolute',
-      bottom: 72,
+      top: 90,
       left: 40,
       right: 40,
       opacity,
@@ -370,21 +372,21 @@ const SubtitleOverlay: React.FC<{
       zIndex: 50,
     }}>
       <div style={{
-        background: 'rgba(8, 12, 24, 0.82)',
-        borderRadius: 14,
-        padding: '14px 24px',
+        background: 'rgba(8, 12, 24, 0.85)',
+        borderRadius: 16,
+        padding: '18px 28px',
         border: `1px solid ${BORDER}`,
-        backdropFilter: 'blur(8px)',
+        backdropFilter: 'blur(10px)',
       }}>
         <p style={{
           margin: 0,
-          fontSize: 28,
-          fontWeight: 600,
+          fontSize: 34,
+          fontWeight: 700,
           color: WHITE,
           lineHeight: 1.5,
           textAlign: 'center',
           fontFamily: "'Noto Sans KR', sans-serif",
-          textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+          textShadow: '0 2px 6px rgba(0,0,0,0.9)',
         }}>
           {currentText}
         </p>
@@ -409,6 +411,8 @@ export const StockShort: React.FC<Props> = ({
   bbPosition = 'middle',
   emaTrend = 'mixed',
   chartData = [],
+  companyNameKo = '',
+  newsHeadlines = [],
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -419,14 +423,16 @@ export const StockShort: React.FC<Props> = ({
   // Scene3: 12-23s (360-690f) — Indicators
   // Scene4: 22-30s (660-900f) — Conclusion
 
-  // Scene timing — no overlap: exit finishes before next enter starts
-  const S1_ENTER = 0;
-  const S1_EXIT = fps * 4;      // exit anim 0.5s → done by 4.5s
-  const S2_ENTER = fps * 5;     // enters at 5s (after S1 fully gone)
-  const S2_EXIT = fps * 12;     // exit anim 0.5s → done by 12.5s
-  const S3_ENTER = fps * 13;    // enters at 13s
-  const S3_EXIT = fps * 22;     // exit anim 0.5s → done by 22.5s
-  const S4_ENTER = fps * 23;    // enters at 23s
+  // Scene timing — 5 scenes, no overlap
+  const S1_ENTER = 0;            // Hero: 0-4s
+  const S1_EXIT = fps * 3.5;
+  const S2_ENTER = fps * 4;      // News: 4-10s
+  const S2_EXIT = fps * 9.5;
+  const S3_ENTER = fps * 10;     // Chart: 10-16s
+  const S3_EXIT = fps * 15.5;
+  const S4_ENTER = fps * 16;     // Indicators: 16-23s
+  const S4_EXIT = fps * 22.5;
+  const S5_ENTER = fps * 23;     // Conclusion: 23-30s
 
   const accentColor = changePct > 0 ? GREEN : changePct < 0 ? RED : YELLOW;
   const sign = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '■';
@@ -434,8 +440,8 @@ export const StockShort: React.FC<Props> = ({
   // Count-up animations
   const animatedChangePct = countUp(frame, S1_ENTER + 15, 30, 0, Math.abs(changePct));
   const animatedPrice = countUp(frame, S1_ENTER + 5, 35, price * 0.97, price);
-  const animatedRsi = countUp(frame, S3_ENTER + 15, 40, 0, rsi);
-  const animatedVol = countUp(frame, S3_ENTER + 20, 35, 0, volumeRatio);
+  const animatedRsi = countUp(frame, S4_ENTER + 15, 40, 0, rsi);
+  const animatedVol = countUp(frame, S4_ENTER + 20, 35, 0, volumeRatio);
 
   const macdBullish = macd > macdSignal;
   const macdColor = macdBullish ? GREEN : RED;
@@ -517,6 +523,16 @@ export const StockShort: React.FC<Props> = ({
           padding: '100px 60px',
         }}>
           {/* Symbol */}
+          {companyNameKo && (
+            <div style={{
+              fontSize: 40, fontWeight: 700, color: DIM,
+              marginBottom: 8,
+              transform: `scale(${symbolSpring})`,
+              transformOrigin: 'left center',
+            }}>
+              {companyNameKo}
+            </div>
+          )}
           <div style={{
             fontSize: 110, fontWeight: 900, color: WHITE,
             letterSpacing: -3, lineHeight: 1,
@@ -597,8 +613,60 @@ export const StockShort: React.FC<Props> = ({
         </div>
       </Scene>
 
-      {/* ══ Scene2: Chart ══════════════════════════════════════════════════════════ */}
+      {/* ══ Scene2: News / Reason ═══════════════════════════════════════════════════ */}
       <Scene frame={frame} enterAt={S2_ENTER} exitAt={S2_EXIT} slideFrom="bottom">
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column',
+          justifyContent: 'center',
+          padding: '100px 60px',
+        }}>
+          <div style={{ fontSize: 32, fontWeight: 700, color: DIM, marginBottom: 8 }}>
+            {changePct > 0 ? '급등 배경' : '급락 배경'}
+          </div>
+          <div style={{
+            fontSize: 48, fontWeight: 900, color: WHITE, marginBottom: 40, lineHeight: 1.3,
+          }}>
+            {companyNameKo ? `${companyNameKo}(${symbol})` : symbol} {changePct > 0 ? '왜 올랐나?' : '왜 떨어졌나?'}
+          </div>
+
+          {/* News items */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {newsHeadlines.length > 0 ? newsHeadlines.slice(0, 4).map((headline, i) => (
+              <div key={i} style={{
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+                borderRadius: 16, padding: '24px 28px',
+                display: 'flex', gap: 16, alignItems: 'flex-start',
+              }}>
+                <div style={{
+                  minWidth: 36, height: 36, borderRadius: 8,
+                  background: `${accentColor}20`, border: `1px solid ${accentColor}40`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20, fontWeight: 800, color: accentColor,
+                }}>{i + 1}</div>
+                <div style={{ fontSize: 26, color: WHITE, lineHeight: 1.5, fontWeight: 500 }}>
+                  {headline}
+                </div>
+              </div>
+            )) : (
+              <div style={{
+                background: SURFACE,
+                border: `1px solid ${BORDER}`,
+                borderRadius: 16, padding: '32px 28px',
+                fontSize: 26, color: DIM, lineHeight: 1.6, textAlign: 'center',
+              }}>
+                {changePct > 0
+                  ? '시장 전반의 매수세와 기술적 반등이 주요 요인으로 분석됩니다.'
+                  : '시장 전반의 매도 압력과 투자 심리 위축이 주요 원인으로 분석됩니다.'}
+              </div>
+            )}
+          </div>
+        </div>
+      </Scene>
+
+      {/* ══ Scene3: Chart ══════════════════════════════════════════════════════════ */}
+      <Scene frame={frame} enterAt={S3_ENTER} exitAt={S3_EXIT} slideFrom="bottom">
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', flexDirection: 'column',
@@ -623,7 +691,7 @@ export const StockShort: React.FC<Props> = ({
           }}>
             <AdvancedChart
               data={chartData}
-              frame={frame - S2_ENTER}
+              frame={frame - S3_ENTER}
               color={accentColor}
               width={920}
               height={320}
@@ -685,8 +753,8 @@ export const StockShort: React.FC<Props> = ({
         </div>
       </Scene>
 
-      {/* ══ Scene3: Indicators ═════════════════════════════════════════════════════ */}
-      <Scene frame={frame} enterAt={S3_ENTER} exitAt={S3_EXIT} slideFrom="bottom">
+      {/* ══ Scene4: Indicators ═════════════════════════════════════════════════════ */}
+      <Scene frame={frame} enterAt={S4_ENTER} exitAt={S4_EXIT} slideFrom="bottom">
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', flexDirection: 'column',
@@ -740,8 +808,8 @@ export const StockShort: React.FC<Props> = ({
         </div>
       </Scene>
 
-      {/* ══ Scene4: Conclusion ══════════════════════════════════════════════════════════ */}
-      <Scene frame={frame} enterAt={S4_ENTER} slideFrom="bottom">
+      {/* ══ Scene5: Conclusion ══════════════════════════════════════════════════════════ */}
+      <Scene frame={frame} enterAt={S5_ENTER} slideFrom="bottom">
         <div style={{
           position: 'absolute', inset: 0,
           display: 'flex', flexDirection: 'column',
