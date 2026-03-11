@@ -321,17 +321,36 @@ def run():
 
     logger.info("Video rendered: %s (%.1f MB)", video_path, video_path.stat().st_size / 1024**2)
 
+    # 5b. Thumbnail generation
+    from stock_pilot.media.short_video import generate_thumbnail
+    thumbnail_path = output_dir / f"{symbol}_{ts}_thumb.jpg"
+    logger.info("Rendering thumbnail...")
+    thumb_ok = generate_thumbnail(pkg, thumbnail_path)
+    if thumb_ok:
+        logger.info("Thumbnail rendered: %s (%.0f KB)", thumbnail_path, thumbnail_path.stat().st_size / 1024)
+    else:
+        logger.warning("Thumbnail rendering failed — uploading without cover image")
+
     # 6. Upload to catbox.moe for public URL
-    logger.info("Uploading to temporary host...")
+    logger.info("Uploading video to temporary host...")
     video_url = upload_to_catbox(video_path, "video/mp4")
     if not video_url:
         logger.error("Temporary hosting failed")
         sys.exit(1)
     logger.info("Public URL: %s", video_url)
 
+    cover_url = ""
+    if thumb_ok and thumbnail_path.exists():
+        logger.info("Uploading thumbnail to temporary host...")
+        cover_url = upload_to_catbox(thumbnail_path, "image/jpeg") or ""
+        if cover_url:
+            logger.info("Thumbnail URL: %s", cover_url)
+        else:
+            logger.warning("Thumbnail upload failed — uploading reel without cover")
+
     # 7. Instagram Reels upload
     logger.info("Uploading to Instagram Reels...")
-    reels_ok = instagram.upload_reel(video_url, caption)
+    reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
 
     if reels_ok:
         logger.info("Instagram Reels upload successful!")
@@ -339,6 +358,8 @@ def run():
         print(f"Stock: {symbol} {arrow}{abs(change_pct):.1f}%")
         print(f"Video: {video_path}")
         print(f"URL: {video_url}")
+        if cover_url:
+            print(f"Thumbnail: {cover_url}")
     else:
         logger.error("Instagram Reels upload failed")
         sys.exit(1)
