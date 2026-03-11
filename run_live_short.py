@@ -94,13 +94,27 @@ def run():
         f" This content is not investment advice."
     )
 
+    news_summary = "\n".join(f"• {n.title}" for n in news_items[:3]) if news_items else ""
+    rsi_outlook = (
+        "RSI approaching oversold — potential rebound zone." if rsi <= 35
+        else ("RSI in overbought territory — watch for pullback." if rsi >= 65
+              else "RSI neutral — trend continuation likely.")
+    )
+
     caption = (
-        f"{'📉' if change_pct < 0 else '📈'} {symbol} {arrow}{abs(change_pct):.1f}% "
+        f"{'📉' if change_pct < 0 else '📈'} ${symbol} {arrow}{abs(change_pct):.1f}% "
         f"{'plunge' if change_pct < 0 else 'surge'}!\n\n"
-        f"RSI {rsi:.0f} ({rsi_label}) | MACD {macd_label}\n"
-        f"Volume {vol_ratio:.1f}x spike\n\n"
-        f"#{symbol} #stocks #USstocks #quant #shorts\n"
-        f"This content is not investment advice."
+        f"📊 Quant Analysis:\n"
+        f"• Price: ${price:,.2f} ({sign}{abs(change_pct):.2f}%)\n"
+        f"• RSI {rsi:.0f} ({rsi_label}) | MACD: {macd_label}\n"
+        f"• Volume: {vol_ratio:.1f}x 20-day average spike\n"
+        f"• Bollinger: {bb_pos} | EMA Trend: {ema}\n\n"
+        + (f"📰 Key News:\n{news_summary}\n\n" if news_summary else "")
+        + f"🔮 Short-term Outlook:\n"
+        f"{'Monitor for continued downside pressure.' if change_pct < 0 else 'Monitor for resistance levels.'} "
+        f"{rsi_outlook}\n\n"
+        f"#{symbol} #stocks #USstocks #quant #stockmarket #investing #shorts\n"
+        f"⚠️ This content is not investment advice."
     )
 
     quant_summary = f"RSI {rsi:.0f}({rsi_label}), MACD {macd_label}, BB {bb_pos}, EMA {ema}"
@@ -122,6 +136,13 @@ def run():
         bb_position=bb_pos,
         ema_trend=ema,
         quant_summary=quant_summary,
+        forecast_detail=(
+            f"{'Bearish pressure visible.' if change_pct < 0 else 'Bullish momentum observed.'} "
+            f"RSI at {rsi:.0f} ({rsi_label}). "
+            f"MACD shows {macd_label}. "
+            f"Volume at {vol_ratio:.1f}x average. "
+            f"{'Watch for support levels before re-entry.' if change_pct < 0 else 'Watch for resistance before adding.'}"
+        ),
         chart_data=chart_data,
     )
 
@@ -134,8 +155,18 @@ def run():
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     video_path = output_dir / f"{symbol}_{ts}_short.mp4"
 
+    # 4b. TTS narration
+    from stock_pilot.media.tts import generate_tts
+    tts_path = output_dir / f"{symbol}_{ts}_tts.mp3"
+    tts_ok = generate_tts(script, tts_path)
+    audio_path = tts_path if tts_ok else None
+    if tts_ok:
+        logger.info("TTS generated: %s", tts_path)
+    else:
+        logger.warning("TTS generation skipped (edge-tts not available or failed)")
+
     logger.info("Rendering video (30s)...")
-    ok = generate_short_video(pkg, video_path)
+    ok = generate_short_video(pkg, video_path, audio_path)
     if not ok or not video_path.exists():
         logger.error("Video rendering failed")
         sys.exit(1)

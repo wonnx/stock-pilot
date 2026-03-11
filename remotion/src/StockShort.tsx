@@ -328,6 +328,68 @@ const Scene: React.FC<{
   );
 };
 
+// ─── 자막 오버레이 ────────────────────────────────────────────────────────────
+const SubtitleOverlay: React.FC<{
+  script: string;
+  frame: number;
+  totalFrames?: number;
+}> = ({ script, frame, totalFrames = 900 }) => {
+  // Split into sentences
+  const sentences = script
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  if (sentences.length === 0) return null;
+
+  const framesPerSentence = Math.floor(totalFrames / sentences.length);
+  const currentIdx = Math.min(
+    Math.floor(frame / framesPerSentence),
+    sentences.length - 1,
+  );
+  const sentenceFrame = frame - currentIdx * framesPerSentence;
+
+  const opacity = interpolate(sentenceFrame, [0, 8, framesPerSentence - 10, framesPerSentence], [0, 1, 1, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  const currentText = sentences[currentIdx];
+
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: 72,
+      left: 40,
+      right: 40,
+      opacity,
+      pointerEvents: 'none',
+      zIndex: 50,
+    }}>
+      <div style={{
+        background: 'rgba(8, 12, 24, 0.82)',
+        borderRadius: 14,
+        padding: '14px 24px',
+        border: `1px solid ${BORDER}`,
+        backdropFilter: 'blur(8px)',
+      }}>
+        <p style={{
+          margin: 0,
+          fontSize: 28,
+          fontWeight: 600,
+          color: WHITE,
+          lineHeight: 1.5,
+          textAlign: 'center',
+          fontFamily: "'Noto Sans KR', sans-serif",
+          textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+        }}>
+          {currentText}
+        </p>
+      </div>
+    </div>
+  );
+};
+
 // ─── 메인 컴포넌트 ───────────────────────────────────────────────────────────
 export const StockShort: React.FC<Props> = ({
   symbol,
@@ -335,6 +397,7 @@ export const StockShort: React.FC<Props> = ({
   changePct,
   cardTitle,
   cardSubtitle,
+  script = '',
   audioPath = '',
   rsi = 50,
   macd = 0,
@@ -392,7 +455,9 @@ export const StockShort: React.FC<Props> = ({
       overflow: 'hidden',
     }}>
 
-      {audioPath && <Audio src={staticFile(audioPath)} />}
+      {audioPath && (
+        <Audio src={audioPath.startsWith('/') ? `file://${audioPath}` : staticFile(audioPath)} />
+      )}
 
       {/* 배경 글로우 - 항상 표시 */}
       <div style={{
@@ -706,6 +771,11 @@ export const StockShort: React.FC<Props> = ({
           </div>
         </div>
       </Scene>
+
+      {/* 자막 오버레이 */}
+      {script && (
+        <SubtitleOverlay script={script} frame={frame} totalFrames={fps * 30} />
+      )}
 
     </AbsoluteFill>
   );
