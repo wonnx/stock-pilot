@@ -1,7 +1,11 @@
 """Card news image generation via HTML/CSS + Puppeteer."""
 from __future__ import annotations
-import json, logging, subprocess, tempfile
+
+import logging
+import subprocess
+import tempfile
 from pathlib import Path
+
 from stock_pilot.content.generator import ContentPackage
 
 logger = logging.getLogger(__name__)

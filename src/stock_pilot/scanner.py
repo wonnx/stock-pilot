@@ -38,9 +38,9 @@ class Scanner:
         alerter: KakaoAlerter | None = None,
         skip_news: bool = False,
     ) -> None:
-        from stock_pilot.data.watchlist import watchlist as default_watchlist
-        from stock_pilot.data.fetcher import fetcher as default_fetcher
         from stock_pilot.alerts.kakao import alerter as default_alerter
+        from stock_pilot.data.fetcher import fetcher as default_fetcher
+        from stock_pilot.data.watchlist import watchlist as default_watchlist
 
         self._watchlist = watchlist or default_watchlist
         self._fetcher = fetcher or default_fetcher

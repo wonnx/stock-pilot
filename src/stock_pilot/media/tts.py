@@ -12,6 +12,7 @@ TTS comparison results (2026-03-11):
   gTTS (Google)                   — 가장 기계적, 비추천
 """
 from __future__ import annotations
+
 import asyncio
 import logging
 import os

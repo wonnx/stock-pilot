@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from stock_pilot.analysis.indicators import TechnicalIndicators
 from stock_pilot.signals.scorer import SignalDirection, SignalScorer
 

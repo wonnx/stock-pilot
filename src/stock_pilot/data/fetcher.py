@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
 import pandas as pd
 import yfinance as yf
@@ -39,7 +38,7 @@ class MarketDataFetcher:
             DataFrame with columns: Open, High, Low, Close, Volume
         """
         cache_key = f"{symbol}:{period}:{interval}"
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
 
         if not force_refresh and cache_key in self._cache:
             cached_at, df = self._cache[cache_key]
@@ -90,7 +89,7 @@ class MarketDataFetcher:
             "volume": float(getattr(info, "three_month_average_volume", 0) or 0),
         }
 
-    def get_earnings_dates(self, symbol: str) -> Optional[pd.DataFrame]:
+    def get_earnings_dates(self, symbol: str) -> pd.DataFrame | None:
         """Fetch upcoming earnings dates."""
         try:
             ticker = yf.Ticker(symbol)

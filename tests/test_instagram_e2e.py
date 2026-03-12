@@ -1,7 +1,7 @@
 """Instagram end-to-end test: 카드뉴스 생성 → 임시 호스팅 → 업로드."""
 from __future__ import annotations
+
 import logging
-import os
 import sys
 import tempfile
 from pathlib import Path

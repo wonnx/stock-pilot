@@ -1,8 +1,12 @@
 from __future__ import annotations
+
+import json
+import logging
 from dataclasses import dataclass, field
-from typing import Optional, TYPE_CHECKING
-import json, logging
+from typing import TYPE_CHECKING
+
 import anthropic
+
 from stock_pilot.news.collector import NewsItem
 from stock_pilot.utils.config import config
 
@@ -44,7 +48,7 @@ class ContentPackage:
 
 class ContentGenerator:
     def __init__(self):
-        self._client: Optional[anthropic.Anthropic] = None
+        self._client: anthropic.Anthropic | None = None
 
     def _get_client(self) -> anthropic.Anthropic:
         if self._client is None:
@@ -58,12 +62,12 @@ class ContentGenerator:
         prev_close: float,
         news_items: list[NewsItem],
         sentiment_summary: str = "",
-        tech: "TechnicalIndicators | None" = None,
+        tech: TechnicalIndicators | None = None,
         chart_data: list[float] | None = None,
-    ) -> Optional[ContentPackage]:
+    ) -> ContentPackage | None:
         # Calculate change
         change_pct = ((price - prev_close) / prev_close * 100) if prev_close else 0.0
-        direction = "rising" if change_pct > 0 else ("falling" if change_pct < 0 else "flat")
+        direction = "상승" if change_pct > 0 else ("하락" if change_pct < 0 else "보합")
 
         # Format news
         news_text = "\n".join(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import feedparser  # type: ignore[import-untyped]
 import httpx
@@ -47,7 +47,7 @@ class NewsCollector:
     def fetch_for_symbol(self, symbol: str, max_items: int = 10) -> list[NewsItem]:
         """Fetch recent news articles mentioning a symbol."""
         items: list[NewsItem] = []
-        cutoff = datetime.now(tz=timezone.utc) - self._lookback
+        cutoff = datetime.now(tz=UTC) - self._lookback
 
         # 1) Finnhub company news (primary, most reliable)
         items.extend(self._fetch_finnhub(symbol, cutoff, max_items))
@@ -65,7 +65,7 @@ class NewsCollector:
     def fetch_market_news(self, max_items: int = 20) -> list[NewsItem]:
         """Fetch general market news and SEC filings."""
         items: list[NewsItem] = []
-        cutoff = datetime.now(tz=timezone.utc) - self._lookback
+        cutoff = datetime.now(tz=UTC) - self._lookback
 
         # SEC EDGAR 8-K filings (material events)
         items.extend(self._fetch_sec_edgar(cutoff, max_items // 2))
@@ -85,7 +85,7 @@ class NewsCollector:
                             title=entry.get("title", ""),
                             summary=entry.get("summary", "")[:500],
                             url=entry.get("link", ""),
-                            published=published or datetime.now(tz=timezone.utc),
+                            published=published or datetime.now(tz=UTC),
                             source=source,
                             symbols=[],
                         )
@@ -103,7 +103,7 @@ class NewsCollector:
             return []
         try:
             from_date = cutoff.strftime("%Y-%m-%d")
-            to_date = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+            to_date = datetime.now(tz=UTC).strftime("%Y-%m-%d")
             resp = httpx.get(
                 FINNHUB_NEWS_URL,
                 params={"symbol": symbol, "from": from_date, "to": to_date, "token": config.FINNHUB_API_KEY},
@@ -113,7 +113,7 @@ class NewsCollector:
                 return []
             items = []
             for article in resp.json()[:max_items]:
-                published = datetime.fromtimestamp(article.get("datetime", 0), tz=timezone.utc)
+                published = datetime.fromtimestamp(article.get("datetime", 0), tz=UTC)
                 if published < cutoff:
                     continue
                 items.append(
@@ -154,9 +154,9 @@ class NewsCollector:
             for article in feed[:max_items]:
                 time_str = article.get("time_published", "")
                 try:
-                    published = datetime.strptime(time_str, "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+                    published = datetime.strptime(time_str, "%Y%m%dT%H%M%S").replace(tzinfo=UTC)
                 except ValueError:
-                    published = datetime.now(tz=timezone.utc)
+                    published = datetime.now(tz=UTC)
                 if published < cutoff:
                     continue
                 items.append(
@@ -189,7 +189,7 @@ class NewsCollector:
                         title=title,
                         summary=entry.get("summary", "")[:500],
                         url=entry.get("link", ""),
-                        published=published or datetime.now(tz=timezone.utc),
+                        published=published or datetime.now(tz=UTC),
                         source="sec_edgar",
                         symbols=[],
                     )
@@ -223,7 +223,7 @@ class NewsCollector:
                             title=title,
                             summary=summary[:500],
                             url=link,
-                            published=published or datetime.now(tz=timezone.utc),
+                            published=published or datetime.now(tz=UTC),
                             source=source,
                             symbols=[symbol],
                         )
@@ -242,7 +242,7 @@ class NewsCollector:
         if parsed:
             try:
                 ts = time.mktime(parsed)
-                return datetime.fromtimestamp(ts, tz=timezone.utc)
+                return datetime.fromtimestamp(ts, tz=UTC)
             except Exception:
                 pass
         return None

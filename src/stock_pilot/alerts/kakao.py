@@ -63,9 +63,6 @@ class KakaoAlerter:
             return False
 
         message = format_signal_message(signal)
-        payload = {
-            "template_object": '{"object_type":"text","text":' + repr(message) + ',"link":{"web_url":"https://finance.yahoo.com/quote/' + signal.symbol + '"}}'
-        }
 
         # Use JSON body via form-encoded as Kakao API requires
         template = {
@@ -107,6 +104,40 @@ class KakaoAlerter:
             if self.send_signal(signal):
                 count += 1
         return count
+
+
+    def send_text(self, text: str) -> bool:
+        """Send a plain text message via KakaoTalk 'Send to Me'. Returns True on success."""
+        if not config.KAKAO_ACCESS_TOKEN:
+            logger.warning("KAKAO_ACCESS_TOKEN not configured, skipping Kakao message")
+            return False
+
+        template = {
+            "object_type": "text",
+            "text": text[:2000],
+            "link": {"web_url": "https://finance.yahoo.com"},
+        }
+
+        import json
+        try:
+            resp = httpx.post(
+                KAKAO_SEND_ME_URL,
+                headers={
+                    "Authorization": f"Bearer {config.KAKAO_ACCESS_TOKEN}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                data={"template_object": json.dumps(template, ensure_ascii=False)},
+                timeout=10,
+            )
+            if resp.status_code == 200:
+                logger.info("Sent KakaoTalk text message")
+                return True
+            else:
+                logger.error("KakaoTalk send_text failed: %s %s", resp.status_code, resp.text)
+                return False
+        except httpx.HTTPError as e:
+            logger.error("KakaoTalk HTTP error: %s", e)
+            return False
 
 
 alerter = KakaoAlerter()

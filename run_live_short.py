@@ -1,4 +1,4 @@
-"""Generate a short-form video from live market data and upload to Instagram Reels."""
+"""Generate a short-form video from live market data and upload to Instagram Reels + YouTube Shorts."""
 import sys
 import logging
 import tempfile
@@ -7,6 +7,15 @@ from pathlib import Path
 sys.path.insert(0, "src")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def send_kakao_alert(text: str) -> None:
+    """Send a Kakao 'Send to Me' message (best-effort, no exception raised)."""
+    try:
+        from stock_pilot.alerts.kakao import alerter
+        alerter.send_text(text)
+    except Exception as e:
+        logger.warning("Kakao alert failed: %s", e)
 
 import httpx
 
@@ -39,12 +48,15 @@ def run():
     from stock_pilot.content.generator import ContentPackage
     from stock_pilot.media.short_video import generate_short_video
     from stock_pilot.upload.instagram import instagram
+    from stock_pilot.upload.youtube import youtube
 
     # 1. Hot stock selection
     logger.info("Selecting hottest stock...")
     hot = select_hot_stock()
     if not hot:
+        msg = "[Stock Pilot] ❌ 파이프라인 실패: 핫 종목 선정 실패"
         logger.error("Hot stock selection failed")
+        send_kakao_alert(msg)
         sys.exit(1)
 
     symbol = hot.symbol
@@ -439,7 +451,9 @@ def run():
         subtitle_timings=subtitle_timings if len(subtitle_timings) == 5 else None,
     )
     if not ok or not video_path.exists():
+        msg = f"[Stock Pilot] ❌ 파이프라인 실패: 영상 렌더링 오류 ({symbol})"
         logger.error("Video rendering failed")
+        send_kakao_alert(msg)
         sys.exit(1)
 
     logger.info("Video rendered: %s (%.1f MB)", video_path, video_path.stat().st_size / 1024**2)
@@ -458,7 +472,9 @@ def run():
     logger.info("Uploading video to temporary host...")
     video_url = upload_to_catbox(video_path, "video/mp4")
     if not video_url:
+        msg = f"[Stock Pilot] ❌ 파이프라인 실패: 임시 호스팅 업로드 오류 ({symbol})"
         logger.error("Temporary hosting failed")
+        send_kakao_alert(msg)
         sys.exit(1)
     logger.info("Public URL: %s", video_url)
 
@@ -475,16 +491,48 @@ def run():
     logger.info("Uploading to Instagram Reels...")
     reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
 
-    if reels_ok:
-        logger.info("Instagram Reels upload successful!")
+    # 8. YouTube Shorts upload
+    logger.info("Uploading to YouTube Shorts...")
+    yt_title = f"{card_title} | Stock Snap 주식분석"
+    yt_description = caption + "\n\n#Shorts #주식 #미국주식 #투자"
+    yt_tags = [symbol, "주식", "미국주식", "투자", "Shorts", "주식분석"]
+    if company_name_ko:
+        yt_tags.insert(0, company_name_ko)
+    yt_video_id = youtube.upload_short(video_path, yt_title, yt_description, yt_tags)
+    yt_ok = yt_video_id is not None
+    if yt_ok:
+        logger.info("YouTube Shorts uploaded: https://youtu.be/%s", yt_video_id)
+    else:
+        logger.warning("YouTube Shorts upload failed (pipeline continues)")
+
+    # 9. Final status report
+    arrow_str = "▲" if change_pct > 0 else "▼"
+    if reels_ok or yt_ok:
+        platforms = []
+        if reels_ok:
+            platforms.append("Instagram")
+        if yt_ok:
+            platforms.append(f"YouTube(https://youtu.be/{yt_video_id})")
+        platform_str = " + ".join(platforms)
+        success_msg = (
+            f"[Stock Pilot] ✅ 콘텐츠 게시 완료!\n"
+            f"종목: {display_name} {arrow_str}{abs(change_pct):.1f}%\n"
+            f"플랫폼: {platform_str}"
+        )
+        send_kakao_alert(success_msg)
+        logger.info("Pipeline complete: %s", platform_str)
         print(f"\nDone!")
-        print(f"Stock: {symbol} {arrow}{abs(change_pct):.1f}%")
+        print(f"Stock: {symbol} {arrow_str}{abs(change_pct):.1f}%")
         print(f"Video: {video_path}")
         print(f"URL: {video_url}")
+        if yt_ok:
+            print(f"YouTube: https://youtu.be/{yt_video_id}")
         if cover_url:
             print(f"Thumbnail: {cover_url}")
     else:
-        logger.error("Instagram Reels upload failed")
+        msg = f"[Stock Pilot] ❌ 모든 플랫폼 업로드 실패 ({symbol})"
+        logger.error("All platform uploads failed")
+        send_kakao_alert(msg)
         sys.exit(1)
 
 

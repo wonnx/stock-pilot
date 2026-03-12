@@ -168,6 +168,7 @@ def cmd_content(args: argparse.Namespace) -> None:
 def cmd_schedule(args: argparse.Namespace) -> None:
     """Start the scheduler for periodic scans."""
     from apscheduler.schedulers.blocking import BlockingScheduler
+
     from stock_pilot.scanner import Scanner
     from stock_pilot.utils.config import config
 

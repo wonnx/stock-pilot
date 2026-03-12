@@ -1,7 +1,12 @@
 """Short-form video generation via Remotion."""
 from __future__ import annotations
-import json, logging, shutil, subprocess
+
+import json
+import logging
+import shutil
+import subprocess
 from pathlib import Path
+
 from stock_pilot.content.generator import ContentPackage
 
 logger = logging.getLogger(__name__)
