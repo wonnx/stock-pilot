@@ -89,54 +89,114 @@ def run():
 
     logger.info("RSI=%.1f, MACD=%.3f, BB=%s, EMA=%s", rsi, macd, bb_pos, ema)
 
-    # 3. News collection (yfinance + fallback to NewsCollector)
-    logger.info("Collecting news...")
+    # 3. News collection — multi-source + LLM direction validation
+    logger.info("Collecting news from multiple sources...")
     import re
     import yfinance as yf
-    news_headlines = []  # For video display (title + detail)
-    news_items = []      # For backward compat
 
+    raw_news: list[tuple[str, str]] = []  # (title, detail) pairs
+
+    # Source A: yfinance
     try:
         ticker_obj = yf.Ticker(symbol)
         yf_news = ticker_obj.news or []
-        for n in yf_news[:8]:
+        for n in yf_news[:10]:
             content = n.get("content", {})
-            title = content.get("title", "")
+            title = content.get("title", "").strip()
+            if not title:
+                continue
             desc_html = content.get("description", "")
             desc = re.sub(r"<[^>]+>", "", desc_html).strip()
-            # Only keep articles that mention this symbol or company name
-            full_text = f"{title} {desc}".lower()
-            if symbol.lower() in full_text or (company_name_ko and company_name_ko.lower() in full_text):
-                # Build detailed headline
-                if desc and len(desc) > 30:
-                    news_headlines.append(f"{title}\n{desc[:200]}")
-                else:
-                    news_headlines.append(title)
-        logger.info("yfinance news: %d relevant articles", len(news_headlines))
+            raw_news.append((title, desc[:300] if desc else ""))
+        logger.info("yfinance news: %d articles", len(raw_news))
     except Exception as e:
         logger.warning("yfinance news fetch failed: %s", e)
 
-    # Fallback to NewsCollector if yfinance had no results
-    if not news_headlines:
-        try:
-            collector = NewsCollector(lookback_hours=48)
-            news_items = collector.fetch_for_symbol(symbol, max_items=5)
-            news_headlines = [f"{n.title}\n{n.summary[:150]}" if n.summary else n.title for n in news_items[:4]]
-        except Exception:
-            pass
+    # Source B: NewsCollector (Finnhub + Alpha Vantage + RSS)
+    try:
+        collector = NewsCollector(lookback_hours=48)
+        collected = collector.fetch_for_symbol(symbol, max_items=8)
+        existing_titles = {t.lower() for t, _ in raw_news}
+        added = 0
+        for item in collected:
+            if item.title.lower() not in existing_titles:
+                raw_news.append((item.title, item.summary[:300] if item.summary else ""))
+                existing_titles.add(item.title.lower())
+                added += 1
+        logger.info("NewsCollector added %d new articles (total=%d)", added, len(raw_news))
+    except Exception as e:
+        logger.warning("NewsCollector fetch failed: %s", e)
 
-    # Translate news headlines to Korean
-    news_headlines_ko = []
-    for h in news_headlines:
-        parts = h.split("\n")
-        title_ko = translate_to_korean(parts[0])
-        if len(parts) > 1 and parts[1].strip():
-            detail_ko = translate_to_korean(parts[1].strip())
-            news_headlines_ko.append(f"{title_ko}\n{detail_ko}")
+    # LLM direction analysis: filter + rewrite for title/content consistency
+    def analyze_news_direction(
+        articles: list[tuple[str, str]],
+        sym: str,
+        chg: float,
+    ) -> list[tuple[str, str]]:
+        """Use Claude to select direction-consistent articles and rewrite in Korean."""
+        import os
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key or not articles:
+            return articles
+        try:
+            import anthropic
+            direction_ko = "급등(상승)" if chg > 0 else "급락(하락)"
+            articles_text = "\n".join(
+                f"{i+1}. 제목: {t}\n   내용: {d}" if d else f"{i+1}. 제목: {t}"
+                for i, (t, d) in enumerate(articles[:10])
+            )
+            prompt = (
+                f"주식 {sym}이 오늘 {chg:+.1f}% {direction_ko}했습니다.\n\n"
+                f"아래는 수집된 뉴스 기사 목록입니다:\n{articles_text}\n\n"
+                f"다음 지시를 따르세요:\n"
+                f"1. 오늘의 {direction_ko}을 가장 잘 설명하는 기사 최대 3개를 선별하세요.\n"
+                f"2. 선별 기사가 없거나 방향이 맞지 않으면 가장 관련성 높은 기사 1-2개를 선별하세요.\n"
+                f"3. 각 기사의 제목과 핵심 내용을 한국어로 간결하게 작성하세요.\n"
+                f"4. 제목은 오늘의 주가 {direction_ko} 방향과 일치해야 합니다.\n"
+                f"5. 응답은 반드시 JSON 배열만 반환하세요: "
+                f'[{{"title": "제목", "detail": "한 문장 핵심 내용"}}, ...]\n'
+                f"제목과 내용은 반드시 한국어로 작성하세요."
+            )
+            client = anthropic.Anthropic(api_key=api_key)
+            resp = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=800,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = resp.content[0].text.strip()
+            # Extract JSON array
+            start = text.find("[")
+            end = text.rfind("]") + 1
+            if start >= 0 and end > start:
+                import json
+                items = json.loads(text[start:end])
+                result = [(item.get("title", ""), item.get("detail", "")) for item in items if item.get("title")]
+                if result:
+                    logger.info("LLM direction analysis: %d articles selected", len(result))
+                    return result
+        except Exception as e:
+            logger.warning("LLM news analysis failed: %s", e)
+        return articles
+
+    analyzed = analyze_news_direction(raw_news, symbol, change_pct)
+
+    # Build final news_headlines (Korean)
+    news_headlines = []
+    for title, detail in analyzed[:4]:
+        # If title is already Korean (from LLM), use as-is; otherwise translate
+        needs_translation = not any("\uAC00" <= c <= "\uD7A3" for c in title)
+        if needs_translation:
+            title_ko = translate_to_korean(title)
+            detail_ko = translate_to_korean(detail) if detail else ""
         else:
-            news_headlines_ko.append(title_ko)
-    news_headlines = news_headlines_ko
-    logger.info("Translated %d headlines to Korean", len(news_headlines))
+            title_ko = title
+            detail_ko = detail
+        if detail_ko and len(detail_ko) > 10:
+            news_headlines.append(f"{title_ko}\n{detail_ko[:200]}")
+        else:
+            news_headlines.append(title_ko)
+
+    logger.info("Final news headlines: %d items", len(news_headlines))
 
     # 4. Template-based content generation (no ANTHROPIC_API_KEY needed)
     direction = hot.direction
@@ -172,7 +232,7 @@ def run():
 
     # S2 News: 왜 급등/급락했는지 자연스러운 문장으로
     if news_headlines:
-        intro = f"{symbol} 주가가 {'급등' if change_pct > 0 else '급락'}한 주요 배경을 살펴보겠습니다. "
+        intro = f"{tts_name} 주가가 {'급등' if change_pct > 0 else '급락'}한 주요 배경을 살펴보겠습니다. "
         items = []
         for i, h in enumerate(news_headlines[:3]):
             parts = h.split("\n")
@@ -186,7 +246,7 @@ def run():
         seg_news = intro + " ".join(items)
     else:
         seg_news = (
-            f"{symbol}의 {'급등' if change_pct > 0 else '급락'} 배경을 살펴보겠습니다. "
+            f"{tts_name}의 {'급등' if change_pct > 0 else '급락'} 배경을 살펴보겠습니다. "
             f"{'시장 전반의 강한 매수세와 투자 심리 개선이 주요 요인으로 분석됩니다.' if change_pct > 0 else '시장 전반의 매도 압력과 투자 심리 위축이 주요 원인으로 분석됩니다.'}"
         )
 
@@ -224,7 +284,16 @@ def run():
     script_segments = [seg_hero, seg_news, seg_chart, seg_indicators, seg_conclusion]
     script = " ".join(script_segments)
 
-    news_summary = "\n".join(f"- {h.split(chr(10))[0]}" for h in news_headlines[:3]) if news_headlines else ""
+    news_summary_items = []
+    for h in news_headlines[:3]:
+        parts = h.split("\n")
+        title_part = parts[0]
+        detail_part = parts[1].strip() if len(parts) > 1 and parts[1].strip() else ""
+        if detail_part:
+            news_summary_items.append(f"• {title_part}\n  → {detail_part[:120]}")
+        else:
+            news_summary_items.append(f"• {title_part}")
+    news_summary = "\n".join(news_summary_items) if news_summary_items else ""
     rsi_outlook = (
         "RSI 과매도 접근 — 반등 가능 구간입니다." if rsi <= 35
         else ("RSI 과매수 영역 — 조정 가능성에 유의하세요." if rsi >= 65
