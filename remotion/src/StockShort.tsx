@@ -539,7 +539,7 @@ export const StockShort: React.FC<Props> = ({
   subtitleTimings = [],
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
 
   // Default scene durations (frames): [Hero, News, Chart, Indicators, Conclusion]
   const DEFAULT_DURATIONS = [
@@ -607,9 +607,11 @@ export const StockShort: React.FC<Props> = ({
         <Audio src={staticFile(audioPath)} volume={1} />
       ) : null}
 
-      {/* BGM: subtle background music at -18dB (volume ≈ 0.126) */}
+      {/* BGM: subtle background music at -18dB (volume ≈ 0.126), full video duration */}
       {bgmPath ? (
-        <Audio src={staticFile(bgmPath)} volume={0.126} />
+        <Sequence from={0} durationInFrames={durationInFrames}>
+          <Audio src={staticFile(bgmPath)} volume={0.126} loop />
+        </Sequence>
       ) : null}
 
       {/* Background glow */}

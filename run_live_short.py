@@ -172,12 +172,17 @@ def run():
 
     # S2 News: 왜 급등/급락했는지 자연스러운 문장으로
     if news_headlines:
-        titles_only = [h.split("\n")[0] for h in news_headlines[:3]]
-        intro = f"{symbol}이 {'급등' if change_pct > 0 else '급락'}한 주요 배경을 살펴보겠습니다. "
+        intro = f"{symbol} 주가가 {'급등' if change_pct > 0 else '급락'}한 주요 배경을 살펴보겠습니다. "
         items = []
-        for i, t in enumerate(titles_only):
+        for i, h in enumerate(news_headlines[:3]):
+            parts = h.split("\n")
+            title = parts[0]
+            detail = parts[1].strip() if len(parts) > 1 and parts[1].strip() else ""
             prefix = ["첫째로", "둘째로", "셋째로"][i]
-            items.append(f"{prefix}, {t}입니다.")
+            if detail:
+                items.append(f"{prefix}, {title}. {detail}")
+            else:
+                items.append(f"{prefix}, {title}입니다.")
         seg_news = intro + " ".join(items)
     else:
         seg_news = (
@@ -192,7 +197,7 @@ def run():
         seg_chart = (
             f"최근 20거래일간의 주가 흐름을 살펴보겠습니다. "
             f"20일 전 {chart_data[0]:.2f}달러에서 현재 {chart_data[-1]:.2f}달러로, "
-            f"{trend}이 이어지고 있으며 총 {abs(pct_20d):.1f}퍼센트 {'상승했습니다' if pct_20d > 0 else '하락했습니다'}. "
+            f"{trend}를 보이고 있으며 총 {abs(pct_20d):.1f}퍼센트 {'상승했습니다' if pct_20d > 0 else '하락했습니다'}. "
             f"{'매수세가 꾸준히 우위를 보이고 있습니다.' if pct_20d > 5 else '점진적으로 회복 중입니다.' if pct_20d > 0 else '지지선 이탈 여부를 주목해야 합니다.' if pct_20d > -5 else '큰 폭의 조정이 진행 중입니다.'}"
         )
     else:
@@ -233,7 +238,7 @@ def run():
     time_label = now_kst.strftime("%Y년 %m월 %d일 %H:%M") + " (한국시간) 기준"
 
     caption = (
-        f"${display_name} {arrow}{abs(change_pct):.1f}% "
+        f"{display_name} {arrow}{abs(change_pct):.1f}% "
         f"{'급락' if change_pct < 0 else '급등'}!\n\n"
         f"[분석 기준] {time_label}\n\n"
         f"[기술적 분석]\n"
@@ -245,7 +250,7 @@ def run():
         + f"[단기 전망]\n"
         f"{'하방 압력 지속 여부를 주시하세요.' if change_pct < 0 else '저항선 돌파 여부를 주시하세요.'} "
         f"{rsi_outlook}\n\n"
-        f"#{symbol} #주식 #미국주식 #주식투자 #투자 #숏폼\n"
+        f"#{symbol} #주식 #미국주식 #주식투자 #투자\n"
         f"본 콘텐츠는 투자 조언이 아닙니다."
     )
 
