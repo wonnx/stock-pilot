@@ -607,11 +607,9 @@ export const StockShort: React.FC<Props> = ({
         <Audio src={staticFile(audioPath)} volume={1} />
       ) : null}
 
-      {/* BGM: subtle background music at -18dB (volume ≈ 0.126), full video duration */}
+      {/* BGM: subtle background music at -18dB (volume ≈ 0.126), full video duration, no loop */}
       {bgmPath ? (
-        <Sequence from={0} durationInFrames={durationInFrames}>
-          <Audio src={staticFile(bgmPath)} volume={0.126} loop />
-        </Sequence>
+        <Audio src={staticFile(bgmPath)} volume={0.126} />
       ) : null}
 
       {/* Background glow */}
