@@ -11,6 +11,7 @@ Instagram Reels E2E 테스트
     --dry-run   파이프라인만 실행, 업로드 안 함 (기본값)
 """
 from __future__ import annotations
+
 import argparse
 import logging
 import sys
@@ -67,7 +68,7 @@ def run_e2e(symbol: str | None = None, upload: bool = False) -> bool:
         print(f"  YouTube Shorts    : {'✅ 업로드 성공' if result.youtube_ok else '⚠️  미설정/실패'}")
 
     if result.errors:
-        print(f"\n  에러 목록:")
+        print("\n  에러 목록:")
         for err in result.errors:
             print(f"    • {err}")
 
@@ -89,7 +90,7 @@ def test_hot_stock_selection() -> bool:
     """핫 주식 선정 단위 테스트."""
     from stock_pilot.hot_stock import select_hot_stock
 
-    print(f"\n[테스트] 핫 주식 자동 선정")
+    print("\n[테스트] 핫 주식 자동 선정")
     result = select_hot_stock()
     if result is None:
         print("  ❌ 핫 주식 선정 실패")
@@ -106,8 +107,8 @@ def test_hot_stock_selection() -> bool:
 
 def test_quant_analysis(symbol: str = "AAPL") -> bool:
     """퀀트 분석 단위 테스트."""
-    from stock_pilot.data.fetcher import fetcher
     from stock_pilot.analysis.indicators import TechnicalAnalyzer
+    from stock_pilot.data.fetcher import fetcher
 
     print(f"\n[테스트] 퀀트 분석 ({symbol})")
     try:
@@ -136,7 +137,7 @@ def test_quant_analysis(symbol: str = "AAPL") -> bool:
 
 def test_content_generation(symbol: str = "NVDA") -> bool:
     """AI 콘텐츠 생성 단위 테스트."""
-    from stock_pilot.content.generator import generator, ContentPackage
+    from stock_pilot.content.generator import generator
 
     print(f"\n[테스트] AI 콘텐츠 생성 ({symbol})")
     try:

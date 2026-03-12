@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 from stock_pilot.analysis.indicators import TechnicalIndicators
 from stock_pilot.news.sentiment import SentimentResult
@@ -12,7 +12,7 @@ from stock_pilot.news.sentiment import SentimentResult
 logger = logging.getLogger(__name__)
 
 
-class SignalDirection(str, Enum):
+class SignalDirection(StrEnum):
     BUY = "BUY"
     SELL = "SELL"
     HOLD = "HOLD"

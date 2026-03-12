@@ -56,7 +56,7 @@ class Config:
         if not cls.KAKAO_ACCESS_TOKEN:
             missing.append("KAKAO_ACCESS_TOKEN")
         if missing:
-            raise EnvironmentError(f"Missing required env vars: {', '.join(missing)}")
+            raise OSError(f"Missing required env vars: {', '.join(missing)}")
 
 
 config = Config()

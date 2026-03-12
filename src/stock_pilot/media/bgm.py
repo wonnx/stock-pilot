@@ -4,6 +4,7 @@ Generates a Cmaj7→Am7→Fmaj7→G7 chord progression lofi pad using numpy and 
 Remotion supports WAV audio natively via staticFile().
 """
 from __future__ import annotations
+
 import logging
 import wave
 from pathlib import Path

@@ -1,8 +1,11 @@
 """Instagram Graph API upload."""
 from __future__ import annotations
+
 import logging
 import time
+
 import httpx
+
 from stock_pilot.utils.config import config
 
 logger = logging.getLogger(__name__)

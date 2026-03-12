@@ -8,8 +8,8 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-import yfinance as yf
 import pandas as pd
+import yfinance as yf
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ def _build_results(raw: pd.DataFrame, symbols: list[str]) -> list[HotStockResult
             change_pct = (close_today - close_prev) / close_prev * 100
             vol_ratio = vol_today / avg_vol
             score = _score(change_pct, vol_ratio)
-            direction = "rising" if change_pct > 0 else ("falling" if change_pct < 0 else "flat")
+            direction = "상승" if change_pct > 0 else ("하락" if change_pct < 0 else "보합")
 
             results.append(
                 HotStockResult(

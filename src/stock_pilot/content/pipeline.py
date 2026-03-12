@@ -1,9 +1,11 @@
 """Full content generation pipeline: hot stock selection -> quant analysis -> content -> media -> Instagram Reels upload."""
 from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 import httpx
 
 logger = logging.getLogger(__name__)
@@ -73,7 +75,7 @@ class ContentPipeline:
         self._out = Path(output_dir)
         self._out.mkdir(parents=True, exist_ok=True)
 
-    def run_hot_stock(self, upload: bool = False) -> "PipelineResult | None":
+    def run_hot_stock(self, upload: bool = False) -> PipelineResult | None:
         """
         Auto-select the hottest stock and run the full pipeline.
 
@@ -99,11 +101,11 @@ class ContentPipeline:
         """Run full pipeline for one symbol."""
         result = PipelineResult(symbol=symbol)
 
+        from stock_pilot.analysis.indicators import TechnicalAnalyzer
+        from stock_pilot.content.generator import generator
         from stock_pilot.data.fetcher import fetcher
         from stock_pilot.news.collector import NewsCollector
         from stock_pilot.news.sentiment import SentimentAnalyzer
-        from stock_pilot.content.generator import generator
-        from stock_pilot.analysis.indicators import TechnicalAnalyzer
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 

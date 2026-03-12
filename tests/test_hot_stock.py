@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from stock_pilot.hot_stock import (
     HotStockResult,
@@ -15,7 +14,6 @@ from stock_pilot.hot_stock import (
     select_hot_stock,
     select_top_n,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
