@@ -146,20 +146,24 @@ def run():
                 for i, (t, d) in enumerate(articles[:10])
             )
             prompt = (
-                f"주식 {sym}이 오늘 {chg:+.1f}% {direction_ko}했습니다.\n\n"
+                f"주식 {sym}이 오늘 {chg:+.2f}% {direction_ko}했습니다.\n\n"
                 f"아래는 수집된 뉴스 기사 목록입니다:\n{articles_text}\n\n"
-                f"다음 지시를 따르세요:\n"
-                f"1. 오늘의 {direction_ko}을 가장 잘 설명하는 기사 최대 3개를 선별하세요.\n"
-                f"2. 선별 기사가 없거나 방향이 맞지 않으면 가장 관련성 높은 기사 1-2개를 선별하세요.\n"
-                f"3. 각 기사의 제목과 핵심 내용을 한국어로 간결하게 작성하세요.\n"
-                f"4. 제목은 오늘의 주가 {direction_ko} 방향과 일치해야 합니다.\n"
+                f"다음 지시를 반드시 따르세요:\n"
+                f"1. {sym} 종목과 **직접 관련된** 기사만 선별하세요. "
+                f"유가, 금리, 환율 등 {sym}과 무관한 거시경제 기사는 제외하세요.\n"
+                f"2. 기사 내용의 방향이 오늘의 주가 {direction_ko} 방향과 일치하는지 판단하세요. "
+                f"급등 종목에는 상승/호재 사유를, 급락 종목에는 하락/악재 사유를 설명하는 기사를 선별하세요.\n"
+                f"3. 위 조건을 만족하는 기사 최대 3개를 선별하세요. "
+                f"조건에 맞는 기사가 없으면 빈 배열을 반환하세요.\n"
+                f"4. 각 기사의 제목과 핵심 내용을 한국어로 간결하게 작성하세요. "
+                f"제목은 당일 주가 방향과 일치하는 톤으로 작성하세요.\n"
                 f"5. 응답은 반드시 JSON 배열만 반환하세요: "
                 f'[{{"title": "제목", "detail": "한 문장 핵심 내용"}}, ...]\n'
                 f"제목과 내용은 반드시 한국어로 작성하세요."
             )
             client = anthropic.Anthropic(api_key=api_key)
             resp = client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model="claude-sonnet-4-6",
                 max_tokens=800,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -225,8 +229,8 @@ def run():
     # S1 Hero: 종목 소개 + 가격 + 등락률
     seg_hero = (
         f"오늘은 {tts_name} 종목을 분석합니다. "
-        f"현재 {symbol}의 주가는 {price:,.2f}달러이며, "
-        f"전일 대비 {abs(change_pct):.1f}퍼센트 {'상승했습니다' if change_pct > 0 else '하락했습니다'}. "
+        f"현재 {tts_name}의 주가는 {price:,.2f}달러이며, "
+        f"전일 대비 {abs(change_pct):.2f}퍼센트 {'상승했습니다' if change_pct > 0 else '하락했습니다'}. "
         f"EMA 기준으로 {'상승 추세가 이어지고 있습니다' if ema == 'bullish' else '하락 추세에 있습니다' if ema == 'bearish' else '혼조 양상을 보이고 있습니다'}."
     )
 
@@ -239,10 +243,7 @@ def run():
             title = parts[0]
             detail = parts[1].strip() if len(parts) > 1 and parts[1].strip() else ""
             prefix = ["첫째로", "둘째로", "셋째로"][i]
-            if detail:
-                items.append(f"{prefix}, {title}. {detail}")
-            else:
-                items.append(f"{prefix}, {title}입니다.")
+            items.append(f"{prefix}, {title}.")
         seg_news = intro + " ".join(items)
     else:
         seg_news = (
@@ -290,7 +291,11 @@ def run():
         title_part = parts[0]
         detail_part = parts[1].strip() if len(parts) > 1 and parts[1].strip() else ""
         if detail_part:
-            news_summary_items.append(f"• {title_part}\n  → {detail_part[:120]}")
+            # 문장 단위로 자르기 (120자 초과 시 마침표/온점 기준으로 잘라 완결된 문장 유지)
+            if len(detail_part) > 120:
+                cutoff = detail_part.rfind(".", 0, 120)
+                detail_part = detail_part[: cutoff + 1] if cutoff > 0 else detail_part[:120]
+            news_summary_items.append(f"• {title_part}\n  → {detail_part}")
         else:
             news_summary_items.append(f"• {title_part}")
     news_summary = "\n".join(news_summary_items) if news_summary_items else ""
