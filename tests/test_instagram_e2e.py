@@ -54,8 +54,8 @@ def upload_to_temp_host(image_path: Path) -> str | None:
     return None
 
 
-def test_card_news_generation() -> Path | None:
-    """카드뉴스 이미지 생성 테스트."""
+def _generate_card_news() -> Path | None:
+    """카드뉴스 이미지를 생성하여 경로 반환."""
     from stock_pilot.content.generator import ContentPackage
     from stock_pilot.media.card_news import generate_card_news
 
@@ -84,8 +84,8 @@ def test_card_news_generation() -> Path | None:
         return None
 
 
-def test_instagram_upload(image_path: Path) -> bool:
-    """생성된 이미지를 Instagram에 업로드 테스트."""
+def _do_instagram_upload(image_path: Path) -> bool:
+    """생성된 이미지를 Instagram에 업로드."""
     from stock_pilot.upload.instagram import instagram
 
     # 1. 임시 공개 URL로 호스팅
@@ -111,6 +111,26 @@ def test_instagram_upload(image_path: Path) -> bool:
     return success
 
 
+def test_card_news_generation() -> None:
+    """카드뉴스 이미지 생성 단위 테스트."""
+    card_path = _generate_card_news()
+    assert card_path is not None, "카드뉴스 생성 실패"
+    if card_path.exists():
+        card_path.unlink()
+
+
+def test_instagram_e2e() -> None:
+    """카드뉴스 생성 → 임시 호스팅 → Instagram 업로드 E2E 테스트."""
+    card_path = _generate_card_news()
+    assert card_path is not None, "카드뉴스 생성 실패"
+    try:
+        result = _do_instagram_upload(card_path)
+        assert result, "Instagram 업로드 실패"
+    finally:
+        if card_path and card_path.exists():
+            card_path.unlink()
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("Instagram E2E 테스트 시작")
@@ -118,7 +138,7 @@ if __name__ == "__main__":
 
     # Step 1: 카드뉴스 생성
     print("\n[1/2] 카드뉴스 이미지 생성...")
-    card_path = test_card_news_generation()
+    card_path = _generate_card_news()
 
     if card_path is None:
         print("\n❌ 카드뉴스 생성 실패 — 테스트 중단")
@@ -126,7 +146,7 @@ if __name__ == "__main__":
 
     # Step 2: Instagram 업로드
     print("\n[2/2] Instagram 업로드 테스트...")
-    upload_ok = test_instagram_upload(card_path)
+    upload_ok = _do_instagram_upload(card_path)
 
     # Cleanup
     if card_path.exists():
