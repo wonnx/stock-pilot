@@ -163,7 +163,7 @@ def run():
             )
             client = anthropic.Anthropic(api_key=api_key)
             resp = client.messages.create(
-                model="claude-sonnet-4-6",
+                model="claude-opus-4-6",
                 max_tokens=800,
                 messages=[{"role": "user", "content": prompt}],
             )
