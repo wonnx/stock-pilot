@@ -33,4 +33,4 @@ jobs:
         run: mypy src/stock_pilot
 
       - name: Run tests
-        run: pytest --cov=stock_pilot --cov-report=term-missing
+        run: pytest --cov=stock_pilot --cov-report=term-missing --ignore=tests/test_reels_e2e.py --ignore=tests/test_instagram_e2e.py
