@@ -1,0 +1,35 @@
+[
+  {
+    "category": "company news",
+    "datetime": 1741824000,
+    "headline": "NVDA Reports Record Q4 Revenue, AI Chip Demand Surges",
+    "id": 100001,
+    "image": "https://example.com/nvda1.jpg",
+    "related": "NVDA",
+    "source": "Reuters",
+    "summary": "NVIDIA Corporation reported record quarterly revenue of $39 billion, beating analyst estimates by 12%, driven by surging demand for its H100 AI accelerator chips.",
+    "url": "https://example.com/nvda-q4-revenue"
+  },
+  {
+    "category": "company news",
+    "datetime": 1741820400,
+    "headline": "Goldman Sachs Raises NVDA Price Target to $1,000",
+    "id": 100002,
+    "image": "https://example.com/nvda2.jpg",
+    "related": "NVDA",
+    "source": "Bloomberg",
+    "summary": "Goldman Sachs raised its price target for NVIDIA to $1,000 citing strong AI infrastructure spending by hyperscalers and data center expansion.",
+    "url": "https://example.com/nvda-pt-raise"
+  },
+  {
+    "category": "company news",
+    "datetime": 1741816800,
+    "headline": "NVIDIA Blackwell GPU Shipments Accelerate in Q1",
+    "id": 100003,
+    "image": "https://example.com/nvda3.jpg",
+    "related": "NVDA",
+    "source": "CNBC",
+    "summary": "Sources indicate NVIDIA's next-generation Blackwell GPU shipments are ramping faster than expected, with major cloud providers placing additional orders.",
+    "url": "https://example.com/nvda-blackwell"
+  }
+]
