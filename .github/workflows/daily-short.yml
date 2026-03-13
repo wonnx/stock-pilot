@@ -56,8 +56,23 @@ jobs:
           KAKAO_ACCESS_TOKEN: ${{ secrets.KAKAO_ACCESS_TOKEN }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: python run_live_short.py
+
+      - name: Notify failure via Kakao
+        if: failure()
+        env:
+          KAKAO_ACCESS_TOKEN: ${{ secrets.KAKAO_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$KAKAO_ACCESS_TOKEN" ]; then
+            curl -s -X POST "https://kapi.kakao.com/v2/api/talk/memo/default/send" \
+              -H "Authorization: Bearer $KAKAO_ACCESS_TOKEN" \
+              -d "template_object=%7B%22object_type%22%3A%22text%22%2C%22text%22%3A%22%5BStock+Pilot%5D+%E2%9D%8C+GitHub+Actions+%ED%8C%8C%EC%9D%B4%ED%94%84%EB%9D%BC%EC%9D%B8+%EC%8B%A4%ED%8C%A8%5Cn%EC%9B%8C%ED%81%AC%ED%94%8C%EB%A1%9C%EC%9A%B0%3A+daily-short.yml%5CnRun+ID%3A+$GITHUB_RUN_ID%5Cn%ED%99%95%EC%9D%B8%3A+https%3A%2F%2Fgithub.com%2Fwonnx%2Fstock-pilot%2Factions%2Fruns%2F$GITHUB_RUN_ID%22%2C%22link%22%3A%7B%22web_url%22%3A%22https%3A%2F%2Fgithub.com%2Fwonnx%2Fstock-pilot%2Factions%2Fruns%2F$GITHUB_RUN_ID%22%7D%7D"
+          fi
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
 
       - name: Upload artifacts on failure
         if: failure()
