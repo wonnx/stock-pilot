@@ -31,6 +31,10 @@ class Config:
     # YouTube Data API v3
     YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
     YOUTUBE_OAUTH_TOKEN: str = os.getenv("YOUTUBE_OAUTH_TOKEN", "")
+    # OAuth2 refresh token flow (preferred over static access token)
+    YOUTUBE_CLIENT_ID: str = os.getenv("YOUTUBE_CLIENT_ID", "")
+    YOUTUBE_CLIENT_SECRET: str = os.getenv("YOUTUBE_CLIENT_SECRET", "")
+    YOUTUBE_REFRESH_TOKEN: str = os.getenv("YOUTUBE_REFRESH_TOKEN", "")
 
     # ElevenLabs TTS (optional, edge-tts used as free default)
     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")

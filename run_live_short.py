@@ -1,4 +1,5 @@
 """Generate a short-form video from live market data and upload to Instagram Reels + YouTube Shorts."""
+import os
 import sys
 import logging
 import tempfile
@@ -7,6 +8,9 @@ from pathlib import Path
 sys.path.insert(0, "src")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+# Dry-run: skip actual uploads (set DRY_RUN=true env var or pass --dry-run flag)
+DRY_RUN: bool = os.getenv("DRY_RUN", "false").lower() in ("1", "true", "yes") or "--dry-run" in sys.argv
 
 
 def send_kakao_alert(text: str) -> None:
@@ -488,17 +492,21 @@ def run():
             logger.warning("Thumbnail upload failed — uploading reel without cover")
 
     # 7. Instagram Reels upload
-    logger.info("Uploading to Instagram Reels...")
-    reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
+    if DRY_RUN:
+        logger.info("[dry-run] Instagram Reels upload skipped")
+        reels_ok = True
+    else:
+        logger.info("Uploading to Instagram Reels...")
+        reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
 
     # 8. YouTube Shorts upload
-    logger.info("Uploading to YouTube Shorts...")
     yt_title = f"{card_title} | Stock Snap 주식분석"
     yt_description = caption + "\n\n#Shorts #주식 #미국주식 #투자"
     yt_tags = [symbol, "주식", "미국주식", "투자", "Shorts", "주식분석"]
     if company_name_ko:
         yt_tags.insert(0, company_name_ko)
-    yt_video_id = youtube.upload_short(video_path, yt_title, yt_description, yt_tags)
+    logger.info("Uploading to YouTube Shorts%s...", " [dry-run]" if DRY_RUN else "")
+    yt_video_id = youtube.upload_short(video_path, yt_title, yt_description, yt_tags, dry_run=DRY_RUN)
     yt_ok = yt_video_id is not None
     if yt_ok:
         logger.info("YouTube Shorts uploaded: https://youtu.be/%s", yt_video_id)
