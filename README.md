@@ -204,9 +204,32 @@ stock-pilot/
 ## Testing
 
 ```bash
+# Unit tests (no secrets required)
 pytest
 pytest --cov=stock_pilot
+
+# E2E dry-run — full pipeline with mock fixtures, no API keys needed
+pytest tests/test_e2e_dry_run.py -v
+# or via npm script:
+pnpm test:e2e:dry-run
 ```
+
+### E2E Dry-Run
+
+`tests/test_e2e_dry_run.py` validates the complete pipeline flow end-to-end using mock fixtures:
+
+| What is mocked | Why |
+|---|---|
+| `select_hot_stock()` | replaces yfinance live data |
+| `MarketDataFetcher.get_ohlcv()` | replaces yfinance OHLCV download |
+| `NewsCollector.fetch_for_symbol()` | replaces Finnhub + Alpha Vantage API calls |
+| `generate_tts_with_timing()` / `generate_tts()` | replaces edge-tts / OpenAI TTS |
+| `generate_short_video()` / `generate_thumbnail()` | replaces Remotion render |
+| `upload_to_catbox()` | replaces catbox.moe HTTP upload |
+
+Fixture JSON files live in `tests/fixtures/`:
+- `finnhub_news.json` — sample Finnhub company-news API response
+- `alphavantage_news.json` — sample Alpha Vantage news sentiment API response
 
 ## License
 
