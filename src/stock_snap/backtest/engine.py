@@ -8,8 +8,8 @@ from typing import Literal
 
 import pandas as pd
 
-from stock_pilot.analysis.indicators import TechnicalAnalyzer
-from stock_pilot.signals.scorer import SignalDirection, SignalScorer
+from stock_snap.analysis.indicators import TechnicalAnalyzer
+from stock_snap.signals.scorer import SignalDirection, SignalScorer
 
 logger = logging.getLogger(__name__)
 

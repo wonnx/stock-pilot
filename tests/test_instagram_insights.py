@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from stock_pilot.analytics.instagram_insights import (
+from stock_snap.analytics.instagram_insights import (
     InstagramInsights,
     _extract_tickers,
     _generate_suggestions,

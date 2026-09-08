@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, "src")
 
-from stock_pilot.utils.retry import with_retry
+from stock_snap.utils.retry import with_retry
 
 # ---------------------------------------------------------------------------
 # retry tests
@@ -72,7 +72,7 @@ def test_record_pipeline_run_creates_report(tmp_path, monkeypatch):
     # Re-import to pick up monkeypatched env
     import importlib
 
-    import stock_pilot.utils.monitoring as mon
+    import stock_snap.utils.monitoring as mon
     importlib.reload(mon)
 
     mon.record_pipeline_run(
@@ -99,7 +99,7 @@ def test_record_pipeline_run_trims_to_max_history(tmp_path, monkeypatch):
     monkeypatch.setenv("CONTENT_OUTPUT_DIR", str(tmp_path))
     import importlib
 
-    import stock_pilot.utils.monitoring as mon
+    import stock_snap.utils.monitoring as mon
     importlib.reload(mon)
     mon._MAX_HISTORY = 5
 
@@ -115,7 +115,7 @@ def test_init_sentry_no_dsn(monkeypatch):
     monkeypatch.delenv("SENTRY_DSN", raising=False)
     import importlib
 
-    import stock_pilot.utils.monitoring as mon
+    import stock_snap.utils.monitoring as mon
     importlib.reload(mon)
 
     result = mon.init_sentry()

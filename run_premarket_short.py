@@ -56,7 +56,7 @@ def select_premarket_hot_stock():
     best = results[0]
 
     # Build a HotStockResult from pre-market data
-    from stock_pilot.hot_stock import HotStockResult
+    from stock_snap.hot_stock import HotStockResult
 
     direction = "rising" if best["change_pct"] > 0 else ("falling" if best["change_pct"] < 0 else "flat")
     # volume_ratio not available in pre-market — use 1.0 as neutral placeholder
@@ -75,7 +75,7 @@ def select_premarket_hot_stock():
 
 def run():
     # Patch select_hot_stock with our pre-market version BEFORE importing run_live_short
-    import stock_pilot.hot_stock as _hs_mod
+    import stock_snap.hot_stock as _hs_mod
     _original = _hs_mod.select_hot_stock
 
     hot = select_premarket_hot_stock()

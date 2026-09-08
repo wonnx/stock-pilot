@@ -6,13 +6,13 @@ import asyncio
 import logging
 from dataclasses import dataclass
 
-from stock_pilot.alerts.kakao import KakaoAlerter
-from stock_pilot.analysis.indicators import TechnicalAnalyzer
-from stock_pilot.data.fetcher import MarketDataFetcher
-from stock_pilot.data.watchlist import Watchlist
-from stock_pilot.news.collector import NewsCollector
-from stock_pilot.news.sentiment import SentimentAnalyzer
-from stock_pilot.signals.scorer import SignalScorer, TradeSignal
+from stock_snap.alerts.kakao import KakaoAlerter
+from stock_snap.analysis.indicators import TechnicalAnalyzer
+from stock_snap.data.fetcher import MarketDataFetcher
+from stock_snap.data.watchlist import Watchlist
+from stock_snap.news.collector import NewsCollector
+from stock_snap.news.sentiment import SentimentAnalyzer
+from stock_snap.signals.scorer import SignalScorer, TradeSignal
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +38,9 @@ class Scanner:
         alerter: KakaoAlerter | None = None,
         skip_news: bool = False,
     ) -> None:
-        from stock_pilot.alerts.kakao import alerter as default_alerter
-        from stock_pilot.data.fetcher import fetcher as default_fetcher
-        from stock_pilot.data.watchlist import watchlist as default_watchlist
+        from stock_snap.alerts.kakao import alerter as default_alerter
+        from stock_snap.data.fetcher import fetcher as default_fetcher
+        from stock_snap.data.watchlist import watchlist as default_watchlist
 
         self._watchlist = watchlist or default_watchlist
         self._fetcher = fetcher or default_fetcher

@@ -6,8 +6,8 @@ import logging
 
 import httpx
 
-from stock_pilot.signals.scorer import SignalDirection, TradeSignal
-from stock_pilot.utils.config import config
+from stock_snap.signals.scorer import SignalDirection, TradeSignal
+from stock_snap.utils.config import config
 
 logger = logging.getLogger(__name__)
 

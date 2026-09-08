@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from stock_pilot.analysis.indicators import TechnicalIndicators
-from stock_pilot.signals.scorer import SignalDirection, SignalScorer
+from stock_snap.analysis.indicators import TechnicalIndicators
+from stock_snap.signals.scorer import SignalDirection, SignalScorer
 
 
 def make_tech(

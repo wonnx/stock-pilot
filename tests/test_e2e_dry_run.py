@@ -55,7 +55,7 @@ def _make_ohlcv(n: int = 65) -> pd.DataFrame:
 
 
 def _make_hot_stock_result():
-    from stock_pilot.hot_stock import HotStockResult
+    from stock_snap.hot_stock import HotStockResult
     return HotStockResult(
         symbol=SYMBOL,
         price=PRICE,
@@ -70,7 +70,7 @@ def _make_hot_stock_result():
 
 
 def _make_news_items():
-    from stock_pilot.news.collector import NewsItem
+    from stock_snap.news.collector import NewsItem
     now = datetime.now(tz=UTC)
     return [
         NewsItem(
@@ -150,19 +150,19 @@ class TestE2EDryRun:
         mock_ticker.news = []
 
         self._patches = [
-            patch("stock_pilot.hot_stock.select_hot_stock", return_value=hot),
-            patch("stock_pilot.data.fetcher.MarketDataFetcher.get_ohlcv", return_value=ohlcv),
-            patch("stock_pilot.news.collector.NewsCollector.fetch_for_symbol", return_value=news_items),
+            patch("stock_snap.hot_stock.select_hot_stock", return_value=hot),
+            patch("stock_snap.data.fetcher.MarketDataFetcher.get_ohlcv", return_value=ohlcv),
+            patch("stock_snap.news.collector.NewsCollector.fetch_for_symbol", return_value=news_items),
             patch("yfinance.Ticker", return_value=mock_ticker),
-            patch("stock_pilot.media.tts.generate_tts_with_timing", side_effect=_tts_with_timing),
-            patch("stock_pilot.media.tts.generate_tts", side_effect=_tts_single),
-            patch("stock_pilot.media.tts.get_audio_duration", return_value=5.0),
-            patch("stock_pilot.media.short_video.generate_short_video", side_effect=_make_dummy_mp4),
-            patch("stock_pilot.media.short_video.generate_thumbnail", side_effect=_make_dummy_jpeg),
-            patch("stock_pilot.utils.monitoring.init_sentry"),
-            patch("stock_pilot.utils.monitoring.capture_exception"),
-            patch("stock_pilot.utils.monitoring.set_sentry_tag"),
-            patch("stock_pilot.utils.monitoring.record_pipeline_run"),
+            patch("stock_snap.media.tts.generate_tts_with_timing", side_effect=_tts_with_timing),
+            patch("stock_snap.media.tts.generate_tts", side_effect=_tts_single),
+            patch("stock_snap.media.tts.get_audio_duration", return_value=5.0),
+            patch("stock_snap.media.short_video.generate_short_video", side_effect=_make_dummy_mp4),
+            patch("stock_snap.media.short_video.generate_thumbnail", side_effect=_make_dummy_jpeg),
+            patch("stock_snap.utils.monitoring.init_sentry"),
+            patch("stock_snap.utils.monitoring.capture_exception"),
+            patch("stock_snap.utils.monitoring.set_sentry_tag"),
+            patch("stock_snap.utils.monitoring.record_pipeline_run"),
         ]
         for p in self._patches:
             p.start()
@@ -175,7 +175,7 @@ class TestE2EDryRun:
         import run_live_short
 
         mock_host = MagicMock(
-            return_value="https://github.com/wonnx/stock-pilot/releases/download/media/dryrun_test.mp4"
+            return_value="https://github.com/wonnx/stock-snap/releases/download/media/dryrun_test.mp4"
         )
 
         env = {
@@ -202,7 +202,7 @@ class TestE2EDryRun:
 
     def test_video_file_generated(self):
         """generate_short_video must be called and produce a file."""
-        from stock_pilot.media import short_video as sv_mod
+        from stock_snap.media import short_video as sv_mod
 
         with patch.object(sv_mod, "generate_short_video", side_effect=_make_dummy_mp4) as mock_vid:
             exit_code, _ = self._run_with_dry_run()
@@ -211,7 +211,7 @@ class TestE2EDryRun:
 
     def test_tts_segments_generated(self):
         """TTS must be called for each of the 5 script segments."""
-        from stock_pilot.media import tts as tts_mod
+        from stock_snap.media import tts as tts_mod
 
         with patch.object(tts_mod, "generate_tts_with_timing", side_effect=_tts_with_timing) as mock_tts:
             exit_code, _ = self._run_with_dry_run()
@@ -226,7 +226,7 @@ class TestE2EDryRun:
 
     def test_instagram_upload_skipped_in_dry_run(self):
         """Instagram Reels upload must be skipped when DRY_RUN=true."""
-        from stock_pilot.upload import instagram as ig_mod
+        from stock_snap.upload import instagram as ig_mod
         mock_upload = MagicMock(return_value=True)
         with patch.object(ig_mod.instagram, "upload_reel", mock_upload):
             exit_code, _ = self._run_with_dry_run()
@@ -235,7 +235,7 @@ class TestE2EDryRun:
 
     def test_youtube_upload_skipped_in_dry_run(self):
         """YouTube Shorts upload must be skipped when DRY_RUN=true."""
-        from stock_pilot.upload import youtube as yt_mod
+        from stock_snap.upload import youtube as yt_mod
         mock_yt = MagicMock(return_value=None)
         with patch.object(yt_mod.youtube, "upload_short", mock_yt):
             exit_code, _ = self._run_with_dry_run()
@@ -302,7 +302,7 @@ class TestPipelineStepsIsolated:
         assert len(df) >= 20
 
     def test_technical_analyzer_runs_on_fixture(self):
-        from stock_pilot.analysis.indicators import TechnicalAnalyzer
+        from stock_snap.analysis.indicators import TechnicalAnalyzer
         df = _make_ohlcv()
         tech = TechnicalAnalyzer().compute(SYMBOL, df)
         assert tech is not None
@@ -334,7 +334,7 @@ class TestPipelineStepsIsolated:
         assert out.stat().st_size > 0
 
     def test_video_stub_creates_mp4_file(self, tmp_path):
-        from stock_pilot.content.generator import ContentPackage
+        from stock_snap.content.generator import ContentPackage
         pkg = MagicMock(spec=ContentPackage)
         out = tmp_path / "test.mp4"
         result = _make_dummy_mp4(pkg, out)

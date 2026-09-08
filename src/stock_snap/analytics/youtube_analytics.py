@@ -10,7 +10,7 @@ from typing import Any
 
 import httpx
 
-from stock_pilot.upload.youtube import YouTubeUploader
+from stock_snap.upload.youtube import YouTubeUploader
 
 logger = logging.getLogger(__name__)
 

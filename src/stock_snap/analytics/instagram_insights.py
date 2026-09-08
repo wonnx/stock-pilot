@@ -10,7 +10,7 @@ from typing import Any
 
 import httpx
 
-from stock_pilot.utils.config import config
+from stock_snap.utils.config import config
 
 logger = logging.getLogger(__name__)
 

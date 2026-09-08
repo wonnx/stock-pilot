@@ -6,7 +6,7 @@ import json
 import logging
 from pathlib import Path
 
-from stock_pilot.utils.config import config
+from stock_snap.utils.config import config
 
 logger = logging.getLogger(__name__)
 

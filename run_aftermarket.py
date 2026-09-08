@@ -79,7 +79,7 @@ def select_aftermarket_hot_stock():
         logger.info("  %s %s%.2f%%  $%.2f", r["symbol"], arrow, abs(r["change_pct"]), r["price"])
 
     best = results[0]
-    from stock_pilot.hot_stock import HotStockResult
+    from stock_snap.hot_stock import HotStockResult
 
     direction = "rising" if best["change_pct"] > 0 else ("falling" if best["change_pct"] < 0 else "flat")
     return HotStockResult(
@@ -148,14 +148,14 @@ def run():
     """애프터마켓 리캡 파이프라인 실행."""
     import datetime
 
-    from stock_pilot.analysis.indicators import TechnicalAnalyzer
-    from stock_pilot.content.generator import ContentPackage
-    from stock_pilot.data.fetcher import StockDataFetcher
-    from stock_pilot.media.short_video import generate_short_video
-    from stock_pilot.media.tts import generate_tts_with_timing
-    from stock_pilot.news.collector import NewsCollector
-    from stock_pilot.upload.instagram import instagram
-    from stock_pilot.upload.youtube import youtube
+    from stock_snap.analysis.indicators import TechnicalAnalyzer
+    from stock_snap.content.generator import ContentPackage
+    from stock_snap.data.fetcher import StockDataFetcher
+    from stock_snap.media.short_video import generate_short_video
+    from stock_snap.media.tts import generate_tts_with_timing
+    from stock_snap.news.collector import NewsCollector
+    from stock_snap.upload.instagram import instagram
+    from stock_snap.upload.youtube import youtube
 
     # 1. 핫 종목 선정
     hot = select_aftermarket_hot_stock()
@@ -254,7 +254,7 @@ def run():
     logger.info("Video rendered: %s", video_path)
 
     # 9. 업로드 (공개 URL 확보 → Instagram → YouTube)
-    from stock_pilot.upload.media_host import publish_media
+    from stock_snap.upload.media_host import publish_media
 
     def _host(file_path: Path, mime: str = "video/mp4") -> str | None:
         try:
@@ -269,7 +269,7 @@ def run():
         sys.exit(1)
 
     # 썸네일
-    from stock_pilot.media.short_video import generate_thumbnail
+    from stock_snap.media.short_video import generate_thumbnail
     thumbnail_path = output_dir / f"{symbol}_{ts}_thumb.jpg"
     cover_url = ""
     if generate_thumbnail(pkg, thumbnail_path):

@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 
 import anthropic
 
-from stock_pilot.news.collector import NewsItem
-from stock_pilot.utils.config import config
+from stock_snap.news.collector import NewsItem
+from stock_snap.utils.config import config
 
 if TYPE_CHECKING:
-    from stock_pilot.analysis.indicators import TechnicalIndicators
+    from stock_snap.analysis.indicators import TechnicalIndicators
 
 logger = logging.getLogger(__name__)
 
