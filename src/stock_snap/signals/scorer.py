@@ -6,8 +6,8 @@ import logging
 from dataclasses import dataclass, field
 from enum import StrEnum
 
-from stock_pilot.analysis.indicators import TechnicalIndicators
-from stock_pilot.news.sentiment import SentimentResult
+from stock_snap.analysis.indicators import TechnicalIndicators
+from stock_snap.news.sentiment import SentimentResult
 
 logger = logging.getLogger(__name__)
 

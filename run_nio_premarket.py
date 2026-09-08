@@ -7,8 +7,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 
 def run():
-    import stock_pilot.hot_stock as _hs_mod
-    from stock_pilot.hot_stock import HotStockResult
+    import stock_snap.hot_stock as _hs_mod
+    from stock_snap.hot_stock import HotStockResult
 
     # NIO data from Market Analyst WON-46 report (2026-03-12 pre-market)
     nio = HotStockResult(

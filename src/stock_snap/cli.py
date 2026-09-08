@@ -1,4 +1,4 @@
-"""CLI entry point for stock-pilot."""
+"""CLI entry point for stock-snap."""
 
 from __future__ import annotations
 
@@ -23,10 +23,10 @@ def setup_logging(verbose: bool = False) -> None:
 
 def cmd_scan(args: argparse.Namespace) -> None:
     """Run a market scan."""
-    from stock_pilot.scanner import Scanner
+    from stock_snap.scanner import Scanner
 
     scanner = Scanner(skip_news=args.no_news)
-    console.print("[bold blue]Stock Pilot — Starting market scan...[/bold blue]")
+    console.print("[bold blue]Stock Snap — Starting market scan...[/bold blue]")
     result = scanner.run_sync(send_alerts=not args.dry_run)
 
     table = Table(title="Trade Signals", show_header=True)
@@ -59,9 +59,9 @@ def cmd_scan(args: argparse.Namespace) -> None:
 
 def cmd_backtest(args: argparse.Namespace) -> None:
     """Run backtest for a symbol or all watchlist symbols."""
-    from stock_pilot.backtest.engine import BacktestEngine
-    from stock_pilot.data.fetcher import fetcher
-    from stock_pilot.data.watchlist import watchlist
+    from stock_snap.backtest.engine import BacktestEngine
+    from stock_snap.data.fetcher import fetcher
+    from stock_snap.data.watchlist import watchlist
 
     bt = BacktestEngine()
     symbols = [args.symbol.upper()] if args.symbol else watchlist.symbols
@@ -96,7 +96,7 @@ def cmd_backtest(args: argparse.Namespace) -> None:
 
 def cmd_watchlist(args: argparse.Namespace) -> None:
     """Manage the watchlist."""
-    from stock_pilot.data.watchlist import watchlist
+    from stock_snap.data.watchlist import watchlist
 
     if args.add:
         for sym in args.add:
@@ -114,8 +114,8 @@ def cmd_watchlist(args: argparse.Namespace) -> None:
 
 def cmd_content(args: argparse.Namespace) -> None:
     """Generate short-form content for top signals."""
-    from stock_pilot.content.pipeline import ContentPipeline
-    from stock_pilot.scanner import Scanner
+    from stock_snap.content.pipeline import ContentPipeline
+    from stock_snap.scanner import Scanner
 
     pipeline = ContentPipeline(output_dir=args.output_dir)
     upload = args.upload and not args.dry_run
@@ -169,8 +169,8 @@ def cmd_schedule(args: argparse.Namespace) -> None:
     """Start the scheduler for periodic scans."""
     from apscheduler.schedulers.blocking import BlockingScheduler
 
-    from stock_pilot.scanner import Scanner
-    from stock_pilot.utils.config import config
+    from stock_snap.scanner import Scanner
+    from stock_snap.utils.config import config
 
     interval = args.interval or config.SCAN_INTERVAL_MINUTES
     scanner = Scanner(skip_news=args.no_news)
@@ -194,7 +194,7 @@ def cmd_schedule(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="stock-pilot",
+        prog="stock-snap",
         description="US stock analysis and alert service",
     )
     parser.add_argument("-v", "--verbose", action="store_true")

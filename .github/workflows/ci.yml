@@ -30,10 +30,10 @@ jobs:
         run: ruff check src/ tests/
 
       - name: Type check with mypy
-        run: mypy src/stock_pilot
+        run: mypy src/stock_snap
 
       - name: Run tests
-        run: pytest --cov=stock_pilot --cov-report=term-missing --ignore=tests/test_reels_e2e.py --ignore=tests/test_instagram_e2e.py
+        run: pytest --cov=stock_snap --cov-report=term-missing --ignore=tests/test_reels_e2e.py --ignore=tests/test_instagram_e2e.py
 
   e2e-dry-run:
     runs-on: ubuntu-latest

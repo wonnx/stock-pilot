@@ -6,12 +6,12 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from stock_pilot.content.generator import ContentPackage
+from stock_snap.content.generator import ContentPackage
 
 logger = logging.getLogger(__name__)
 
 TEMPLATE_DIR = Path(__file__).parent / "templates"
-# stock-pilot root (where node_modules lives)
+# stock-snap root (where node_modules lives)
 _PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 

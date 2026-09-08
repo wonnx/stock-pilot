@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from stock_pilot.backtest.engine import BacktestEngine, BacktestResult
+from stock_snap.backtest.engine import BacktestEngine, BacktestResult
 
 
 def make_trending_ohlcv(n: int = 200, trend: str = "up") -> pd.DataFrame:

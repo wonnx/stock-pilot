@@ -6,7 +6,7 @@ import time
 
 import httpx
 
-from stock_pilot.utils.config import config
+from stock_snap.utils.config import config
 
 logger = logging.getLogger(__name__)
 IG_API_BASE = "https://graph.facebook.com/v19.0"

@@ -1,5 +1,5 @@
 {
-  "name": "stock-pilot-remotion",
+  "name": "stock-snap-remotion",
   "version": "1.0.0",
   "scripts": {
     "start": "remotion studio",
