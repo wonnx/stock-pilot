@@ -11,7 +11,7 @@ import httpx
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-# stock-pilot src를 경로에 추가
+# stock-snap src를 경로에 추가
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 
@@ -56,8 +56,8 @@ def upload_to_temp_host(image_path: Path) -> str | None:
 
 def _generate_card_news() -> Path | None:
     """카드뉴스 이미지를 생성하여 경로 반환."""
-    from stock_pilot.content.generator import ContentPackage
-    from stock_pilot.media.card_news import generate_card_news
+    from stock_snap.content.generator import ContentPackage
+    from stock_snap.media.card_news import generate_card_news
 
     pkg = ContentPackage(
         symbol="NVDA",
@@ -77,27 +77,27 @@ def _generate_card_news() -> Path | None:
     success = generate_card_news(pkg, output_path)
     if success and output_path.exists():
         size = output_path.stat().st_size
-        logger.info("✅ 카드뉴스 생성 성공: %s (%d bytes)", output_path, size)
+        logger.info("카드뉴스 생성 성공: %s (%d bytes)", output_path, size)
         return output_path
     else:
-        logger.error("❌ 카드뉴스 생성 실패")
+        logger.error("카드뉴스 생성 실패")
         return None
 
 
 def _do_instagram_upload(image_path: Path) -> bool:
     """생성된 이미지를 Instagram에 업로드."""
-    from stock_pilot.upload.instagram import instagram
+    from stock_snap.upload.instagram import instagram
 
     # 1. 임시 공개 URL로 호스팅
     logger.info("이미지를 임시 호스팅 서비스에 업로드 중...")
     public_url = upload_to_temp_host(image_path)
     if not public_url:
-        logger.error("❌ 임시 호스팅 실패 — Instagram 업로드 불가")
+        logger.error("임시 호스팅 실패 — Instagram 업로드 불가")
         return False
 
     # 2. Instagram 업로드
     caption = (
-        "📊 NVDA 오늘 +3.25% 급등!\n\n"
+        "NVDA 오늘 +3.25% 급등!\n\n"
         "AI 칩 수요 급증으로 분기 최고가 경신\n\n"
         "#NVDA #엔비디아 #미국주식 #AI주식 #주식투자\n"
         "⚠️ 본 콘텐츠는 투자 조언이 아닙니다."
@@ -105,9 +105,9 @@ def _do_instagram_upload(image_path: Path) -> bool:
     logger.info("Instagram 업로드 시도: @stock.snap")
     success = instagram.upload_photo(public_url, caption)
     if success:
-        logger.info("✅ Instagram 업로드 성공!")
+        logger.info("Instagram 업로드 성공!")
     else:
-        logger.error("❌ Instagram 업로드 실패")
+        logger.error("Instagram 업로드 실패")
     return success
 
 
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     card_path = _generate_card_news()
 
     if card_path is None:
-        print("\n❌ 카드뉴스 생성 실패 — 테스트 중단")
+        print("\n카드뉴스 생성 실패 — 테스트 중단")
         sys.exit(1)
 
     # Step 2: Instagram 업로드
@@ -154,8 +154,8 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 60)
     print("테스트 결과 요약:")
-    print(f"  카드뉴스 생성: {'✅ 성공' if card_path else '❌ 실패'}")
-    print(f"  Instagram 업로드: {'✅ 성공' if upload_ok else '❌ 실패'}")
+    print(f"  카드뉴스 생성: {'성공' if card_path else '실패'}")
+    print(f"  Instagram 업로드: {'성공' if upload_ok else '실패'}")
     print("=" * 60)
 
     sys.exit(0 if upload_ok else 1)
