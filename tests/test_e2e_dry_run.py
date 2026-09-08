@@ -171,10 +171,12 @@ class TestE2EDryRun:
             p.stop()
 
     def _run_with_dry_run(self):
-        """Run the pipeline in dry-run mode and return (exit_code_or_none, mock_catbox)."""
+        """Run the pipeline in dry-run mode and return (exit_code_or_none, mock_host)."""
         import run_live_short
 
-        mock_catbox = MagicMock(return_value="https://files.catbox.moe/dryrun_test.mp4")
+        mock_host = MagicMock(
+            return_value="https://github.com/wonnx/stock-pilot/releases/download/media/dryrun_test.mp4"
+        )
 
         env = {
             "DRY_RUN": "true",
@@ -184,14 +186,14 @@ class TestE2EDryRun:
         with (
             patch.dict(os.environ, env, clear=False),
             patch.object(run_live_short, "DRY_RUN", True),
-            patch.object(run_live_short, "upload_to_catbox", mock_catbox),
+            patch.object(run_live_short, "publish_media", mock_host),
             patch.object(run_live_short, "send_kakao_alert"),
         ):
             try:
                 run_live_short.run()
-                return None, mock_catbox
+                return None, mock_host
             except SystemExit as exc:
-                return exc.code, mock_catbox
+                return exc.code, mock_host
 
     def test_pipeline_exits_cleanly(self):
         """Pipeline must not call sys.exit in dry-run mode with all mocks active."""
@@ -217,10 +219,10 @@ class TestE2EDryRun:
         # 5 segments expected; may fall back to single if < 5 succeed
         assert mock_tts.call_count >= 1, "generate_tts_with_timing was never called"
 
-    def test_catbox_upload_called(self):
-        """Video must be uploaded to catbox (for public URL) even in dry-run."""
-        _, mock_catbox = self._run_with_dry_run()
-        assert mock_catbox.called, "upload_to_catbox was never called"
+    def test_media_host_upload_called(self):
+        """Video must get a public URL (release asset) even in dry-run."""
+        _, mock_host = self._run_with_dry_run()
+        assert mock_host.called, "publish_media was never called"
 
     def test_instagram_upload_skipped_in_dry_run(self):
         """Instagram Reels upload must be skipped when DRY_RUN=true."""

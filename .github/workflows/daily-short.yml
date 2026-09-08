@@ -14,6 +14,8 @@ on:
 jobs:
   generate-and-publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 60
 
     steps:
@@ -62,6 +64,9 @@ jobs:
           ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          # Release assets give the rendered video a public URL for the Graph API
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: python run_live_short.py
 
