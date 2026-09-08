@@ -15,16 +15,16 @@ logger = logging.getLogger(__name__)
 DRY_RUN: bool = os.getenv("DRY_RUN", "false").lower() in ("1", "true", "yes") or "--dry-run" in sys.argv
 
 # Initialize Sentry early (no-op if SENTRY_DSN not set)
-from stock_pilot.utils.monitoring import init_sentry, capture_exception, set_sentry_tag, record_pipeline_run
-from stock_pilot.utils.retry import with_retry
-from stock_pilot.upload.media_host import publish_media
+from stock_snap.utils.monitoring import init_sentry, capture_exception, set_sentry_tag, record_pipeline_run
+from stock_snap.utils.retry import with_retry
+from stock_snap.upload.media_host import publish_media
 init_sentry()
 
 
 def send_kakao_alert(text: str) -> None:
     """Send a Kakao 'Send to Me' message (best-effort, no exception raised)."""
     try:
-        from stock_pilot.alerts.kakao import alerter
+        from stock_snap.alerts.kakao import alerter
         alerter.send_text(text)
     except Exception as e:
         logger.warning("Kakao alert failed: %s", e)
@@ -41,20 +41,20 @@ def translate_to_korean(text: str) -> str:
 def run():
     _pipeline_start = time.monotonic()
 
-    from stock_pilot.hot_stock import select_hot_stock
-    from stock_pilot.data.fetcher import fetcher
-    from stock_pilot.analysis.indicators import TechnicalAnalyzer
-    from stock_pilot.news.collector import NewsCollector
-    from stock_pilot.content.generator import ContentPackage
-    from stock_pilot.media.short_video import generate_short_video
-    from stock_pilot.upload.instagram import instagram
-    from stock_pilot.upload.youtube import youtube
+    from stock_snap.hot_stock import select_hot_stock
+    from stock_snap.data.fetcher import fetcher
+    from stock_snap.analysis.indicators import TechnicalAnalyzer
+    from stock_snap.news.collector import NewsCollector
+    from stock_snap.content.generator import ContentPackage
+    from stock_snap.media.short_video import generate_short_video
+    from stock_snap.upload.instagram import instagram
+    from stock_snap.upload.youtube import youtube
 
     # 1. Hot stock selection
     logger.info("Selecting hottest stock...")
     hot = select_hot_stock()
     if not hot:
-        msg = "[Stock Pilot] ❌ 파이프라인 실패: 핫 종목 선정 실패"
+        msg = "[Stock Snap] 파이프라인 실패: 핫 종목 선정 실패"
         logger.error("Hot stock selection failed")
         send_kakao_alert(msg)
         record_pipeline_run(
@@ -388,7 +388,7 @@ def run():
     video_path = output_dir / f"{symbol}_{ts}_short.mp4"
 
     # 4b. TTS narration — generate per-scene audio segments with timing data
-    from stock_pilot.media.tts import generate_tts_with_timing, generate_tts
+    from stock_snap.media.tts import generate_tts_with_timing, generate_tts
     tts_segment_paths = []
     subtitle_timings: list[list[tuple[float, float]]] = []
     tts_all_ok = True
@@ -417,7 +417,7 @@ def run():
             logger.warning("TTS generation skipped")
 
     # 4c. Compute dynamic video timing based on TTS durations
-    from stock_pilot.media.tts import get_audio_duration
+    from stock_snap.media.tts import get_audio_duration
     import math
     FPS = 30
     MIN_SCENE_SECS = [5.0, 8.0, 6.0, 8.0, 6.0]  # minimum per scene
@@ -465,7 +465,7 @@ def run():
         subtitle_timings=subtitle_timings if len(subtitle_timings) == 5 else None,
     )
     if not ok or not video_path.exists():
-        msg = f"[Stock Pilot] ❌ 파이프라인 실패: 영상 렌더링 오류 ({symbol})"
+        msg = f"[Stock Snap] 파이프라인 실패: 영상 렌더링 오류 ({symbol})"
         logger.error("Video rendering failed")
         send_kakao_alert(msg)
         record_pipeline_run(
@@ -481,7 +481,7 @@ def run():
     logger.info("Video rendered: %s (%.1f MB)", video_path, video_path.stat().st_size / 1024**2)
 
     # 5b. Thumbnail generation
-    from stock_pilot.media.short_video import generate_thumbnail
+    from stock_snap.media.short_video import generate_thumbnail
     thumbnail_path = output_dir / f"{symbol}_{ts}_thumb.jpg"
     logger.info("Rendering thumbnail...")
     thumb_ok = generate_thumbnail(pkg, thumbnail_path)
@@ -504,7 +504,7 @@ def run():
         capture_exception(exc, {"step": "video_host_upload", "symbol": symbol})
 
     if not video_url:
-        msg = f"[Stock Pilot] ❌ 파이프라인 실패: 임시 호스팅 업로드 오류 ({symbol})"
+        msg = f"[Stock Snap] 파이프라인 실패: 임시 호스팅 업로드 오류 ({symbol})"
         logger.error("Temporary hosting failed")
         send_kakao_alert(msg)
         record_pipeline_run(
@@ -577,7 +577,7 @@ def run():
             platforms.append(f"YouTube(https://youtu.be/{yt_video_id})")
         platform_str = " + ".join(platforms)
         success_msg = (
-            f"[Stock Pilot] ✅ 콘텐츠 게시 완료!\n"
+            f"[Stock Snap] 게시 완료\n"
             f"종목: {display_name} {arrow_str}{abs(change_pct):.1f}%\n"
             f"플랫폼: {platform_str}"
         )
@@ -600,7 +600,7 @@ def run():
         if cover_url:
             print(f"Thumbnail: {cover_url}")
     else:
-        msg = f"[Stock Pilot] ❌ 모든 플랫폼 업로드 실패 ({symbol})"
+        msg = f"[Stock Snap] 모든 플랫폼 업로드 실패 ({symbol})"
         logger.error("All platform uploads failed")
         send_kakao_alert(msg)
         record_pipeline_run(

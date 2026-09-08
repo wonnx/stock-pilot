@@ -1,7 +1,6 @@
 # v12 QA 검증 보고서 — Before/After 비교
 
 > 작성일: 2026-03-12
-> 담당: QA Engineer
 > 비교 범위: v11 (커밋 d4e5f39) → v12 (커밋 81ec333)
 > 변경 파일: `run_live_short.py`, `remotion/src/StockShort.tsx`
 
@@ -11,11 +10,11 @@
 
 | # | 수정 항목 | Before (v11) | After (v12) | TC | 결과 |
 |---|-----------|-------------|------------|-----|------|
-| 1 | 썸네일 누락 | v7에서 수정됨 | 유지 | TC-001 | ✅ |
-| 2 | TTS 종목코드→한글 | 티커(NVDA) 읽음 | 한글명(엔비디아) 읽음 | TC-002 | ✅ |
-| 3 | 캡션 상세화 | 제목만 표시 | 제목 + 상세내용 | TC-005 | ✅ |
-| 4 | 뉴스 분석 정확도 | yfinance 단일 소스, 방향 미검증 | 다중 소스 + LLM 방향 검증 | TC-004 | ✅ |
-| 5 | BGM 연속 재생 | Sequence+loop (반복 끊김) | 직접 Audio 태그 (연속 재생) | TC-003 | ✅ |
+| 1 | 썸네일 누락 | v7에서 수정됨 | 유지 | TC-001 | PASS |
+| 2 | TTS 종목코드→한글 | 티커(NVDA) 읽음 | 한글명(엔비디아) 읽음 | TC-002 | PASS |
+| 3 | 캡션 상세화 | 제목만 표시 | 제목 + 상세내용 | TC-005 | PASS |
+| 4 | 뉴스 분석 정확도 | yfinance 단일 소스, 방향 미검증 | 다중 소스 + LLM 방향 검증 | TC-004 | PASS |
+| 5 | BGM 연속 재생 | Sequence+loop (반복 끊김) | 직접 Audio 태그 (연속 재생) | TC-003 | PASS |
 
 **자동화 테스트 결과: 26/26 PASS**
 
@@ -31,7 +30,7 @@
 | 파일 | `short_video.py` | `short_video.py:11` |
 | 처리 | 썸네일 없음 | Remotion Still 렌더링 |
 
-**v12 상태**: `generate_thumbnail()` 함수가 `src/stock_pilot/media/short_video.py:11`에 정상 존재.
+**v12 상태**: `generate_thumbnail()` 함수가 `src/stock_snap/media/short_video.py:11`에 정상 존재.
 TC-001 자동화는 부분적 (Node.js 환경 필요). 함수 존재 여부는 TC-001 smoke test로 확인 완료.
 
 ---
@@ -150,7 +149,7 @@ for h in news_headlines[:3]:
 ### 영상 생성 실행 방법
 
 ```bash
-cd /Users/jwkim/stock-pilot
+cd /Users/jwkim/stock-snap
 uv run python run_live_short.py
 ```
 
@@ -171,34 +170,34 @@ uv run python run_live_short.py
 ## 자동화 TC 실행 결과 (2026-03-12)
 
 ```
-Stock Pilot v12 QA 자동화 테스트
+Stock Snap v12 QA 자동화 테스트
 ============================================================
-  ✅ PASS  TestTC002_TtsKoreanName.test_all_major_symbols_have_korean_name
-  ✅ PASS  TestTC002_TtsKoreanName.test_seg_news_fallback_uses_tts_name
-  ✅ PASS  TestTC002_TtsKoreanName.test_seg_news_uses_tts_name_not_symbol
-  ✅ PASS  TestTC002_TtsKoreanName.test_tts_generate_function_exists
-  ✅ PASS  TestTC002_TtsKoreanName.test_tts_name_fallback_to_ticker_for_unknown
-  ✅ PASS  TestTC002_TtsKoreanName.test_tts_name_uses_korean_for_known_symbol
-  ✅ PASS  TestTC002_TtsKoreanName.test_tts_returns_bool
-  ✅ PASS  TestTC003_BgmContinuous.test_bgm_audio_tag_exists
-  ✅ PASS  TestTC003_BgmContinuous.test_bgm_audio_without_loop
-  ✅ PASS  TestTC003_BgmContinuous.test_bgm_no_sequence_wrapper
-  ✅ PASS  TestTC004_NewsDirectionConsistency.test_fallback_when_empty_articles
-  ✅ PASS  TestTC004_NewsDirectionConsistency.test_fallback_when_no_api_key
-  ✅ PASS  TestTC004_NewsDirectionConsistency.test_llm_response_parsing
-  ✅ PASS  TestTC004_NewsDirectionConsistency.test_llm_returns_max_3_articles
-  ✅ PASS  TestTC004_NewsDirectionConsistency.test_news_deduplication
-  ✅ PASS  TestTC005_CaptionDetail.test_news_summary_bullet_format
-  ✅ PASS  TestTC005_CaptionDetail.test_news_summary_detail_truncated_at_120
-  ✅ PASS  TestTC005_CaptionDetail.test_news_summary_includes_detail
-  ✅ PASS  TestTC005_CaptionDetail.test_news_summary_max_3_items
-  ✅ PASS  TestTC005_CaptionDetail.test_news_summary_no_detail
-  ✅ PASS  TestTC005_CaptionDetail.test_v11_vs_v12_summary_format_difference
-  ✅ PASS  TestV12BeforeAfter.test_fix1_thumbnail_function_exists
-  ✅ PASS  TestV12BeforeAfter.test_fix2_tts_uses_korean_name
-  ✅ PASS  TestV12BeforeAfter.test_fix3_caption_includes_detail
-  ✅ PASS  TestV12BeforeAfter.test_fix4_news_direction_llm_prompt_format
-  ✅ PASS  TestV12BeforeAfter.test_fix5_bgm_no_loop_in_tsx
+  PASS  TestTC002_TtsKoreanName.test_all_major_symbols_have_korean_name
+  PASS  TestTC002_TtsKoreanName.test_seg_news_fallback_uses_tts_name
+  PASS  TestTC002_TtsKoreanName.test_seg_news_uses_tts_name_not_symbol
+  PASS  TestTC002_TtsKoreanName.test_tts_generate_function_exists
+  PASS  TestTC002_TtsKoreanName.test_tts_name_fallback_to_ticker_for_unknown
+  PASS  TestTC002_TtsKoreanName.test_tts_name_uses_korean_for_known_symbol
+  PASS  TestTC002_TtsKoreanName.test_tts_returns_bool
+  PASS  TestTC003_BgmContinuous.test_bgm_audio_tag_exists
+  PASS  TestTC003_BgmContinuous.test_bgm_audio_without_loop
+  PASS  TestTC003_BgmContinuous.test_bgm_no_sequence_wrapper
+  PASS  TestTC004_NewsDirectionConsistency.test_fallback_when_empty_articles
+  PASS  TestTC004_NewsDirectionConsistency.test_fallback_when_no_api_key
+  PASS  TestTC004_NewsDirectionConsistency.test_llm_response_parsing
+  PASS  TestTC004_NewsDirectionConsistency.test_llm_returns_max_3_articles
+  PASS  TestTC004_NewsDirectionConsistency.test_news_deduplication
+  PASS  TestTC005_CaptionDetail.test_news_summary_bullet_format
+  PASS  TestTC005_CaptionDetail.test_news_summary_detail_truncated_at_120
+  PASS  TestTC005_CaptionDetail.test_news_summary_includes_detail
+  PASS  TestTC005_CaptionDetail.test_news_summary_max_3_items
+  PASS  TestTC005_CaptionDetail.test_news_summary_no_detail
+  PASS  TestTC005_CaptionDetail.test_v11_vs_v12_summary_format_difference
+  PASS  TestV12BeforeAfter.test_fix1_thumbnail_function_exists
+  PASS  TestV12BeforeAfter.test_fix2_tts_uses_korean_name
+  PASS  TestV12BeforeAfter.test_fix3_caption_includes_detail
+  PASS  TestV12BeforeAfter.test_fix4_news_direction_llm_prompt_format
+  PASS  TestV12BeforeAfter.test_fix5_bgm_no_loop_in_tsx
 
 결과: 26/26 PASS  |  0 FAIL  |  0 SKIP
 ```

@@ -1,124 +1,106 @@
-# Stock Pilot — Content Pipeline Guide
+# Pipeline reference
 
-End-to-end process for generating short-form stock analysis videos and uploading to Instagram Reels.
+Module-level detail for the content pipeline. See `README.md` for setup and day-to-day
+usage.
 
-## Architecture Overview
+## Stages
 
-```
-Hot Stock Selection → Quant Analysis → News Collection → Content Generation → Video Rendering → Upload
-     (yfinance)        (pandas-ta)      (Finnhub/RSS)    (Claude API/Template)  (Remotion)    (Instagram)
-```
+### 1. Hot stock selection — `src/stock_snap/hot_stock.py`
 
-## Agent Roles
+Scans 39 US symbols (S&P 500 names plus thematic tickers) and ranks them by a composite
+score: absolute price change % (up to 50 points) plus volume spike ratio against the
+20-day average (up to 50 points). Returns the top symbol.
 
-| Agent | Role | Responsibility |
-|-------|------|----------------|
-| **CEO** (`9014cf52`) | Strategy | Coordinates pipeline, delegates tasks, reviews results |
-| **CTO** (`bf374a0e`) | Architecture | System design, code reviews, technical decisions |
-| **Video Designer** (`8ae29418`) | Production | Remotion template design, video rendering, upload execution |
-| **Market Analyst** (`2a12958a`) | Research | Hot stock selection logic, news analysis, market sentiment |
-| **Quant Analyst** (`38c427d1`) | Analysis | Technical indicators (RSI, MACD, BB, SMA/EMA), forecast models |
+Direction matters downstream, so both large gainers and large losers are eligible.
 
-## Pipeline Steps
+### 2. Technical analysis — `src/stock_snap/analysis/indicators.py`
 
-### 1. Hot Stock Selection
-- **Module**: `src/stock_pilot/hot_stock.py`
-- **Owner**: Market Analyst
-- Scans 40+ US stocks (S&P 500 representatives + thematic stocks)
-- Composite scoring: price change % (max 50pts) + volume spike ratio (max 50pts)
-- 20-day average volume as baseline
+Computed on 3 months of daily OHLCV:
 
-### 2. Quant Analysis
-- **Module**: `src/stock_pilot/analysis/indicators.py`
-- **Owner**: Quant Analyst
-- Computes: RSI(14), MACD(12/26/9), Bollinger Bands(20/2σ), SMA(5/20/60), EMA(9/21/50)
-- Pivot points, 20-day trendline, golden/death cross detection
-- Volume spike detection
+| Indicator | Parameters | Used for |
+|---|---|---|
+| RSI | 14 | overbought above 70, oversold below 30 |
+| MACD | 12/26/9 | momentum direction |
+| Bollinger Bands | 20, 2σ | band position, squeeze detection |
+| SMA | 5/20/60 | trend alignment, golden/death cross |
+| EMA | 9/21/50 | short-term trend |
+| Pivot points | classic H/L/C | support and resistance levels |
+| Trendline | 20-day linear regression | direction and R² |
+| Volume ratio | vs 20-day average | spike detection above 2x |
 
-### 3. News Collection
-- **Module**: `src/stock_pilot/news/collector.py`
-- **Owner**: Market Analyst
-- Sources: Finnhub, Alpha Vantage, SEC EDGAR, Yahoo Finance RSS
-- Lookback: 24 hours
-- Sentiment analysis via `src/stock_pilot/news/sentiment.py`
+### 3. News collection — `src/stock_snap/news/collector.py`
 
-### 4. Content Generation
-- **Module**: `src/stock_pilot/content/generator.py`
-- Two modes:
-  - **Claude API mode**: Full AI-generated narration, captions, card news (requires `ANTHROPIC_API_KEY`)
-  - **Template mode**: Pre-built templates using quant data (no API key needed, used in `run_live_short.py`)
+Four sources, 24-48h lookback, deduplicated by title: yfinance, Finnhub, Alpha Vantage,
+SEC EDGAR, and Yahoo Finance RSS. Missing API keys just drop that source.
 
-### 5. Media Production
-- **Card News**: `src/stock_pilot/media/card_news.py` — Static image with stock data overlay
-- **TTS**: `src/stock_pilot/media/tts.py` — Edge TTS narration
-- **Video**: `src/stock_pilot/media/short_video.py` — 30-second Remotion render
-- **Owner**: Video Designer
-- Remotion project: `remotion/` (Node.js, React-based animation)
+### 4. Script generation — `src/stock_snap/content/generator.py`
 
-### 6. Upload
-- **Instagram**: `src/stock_pilot/upload/instagram.py`
-  - Video → GitHub Release asset (public URL) → Instagram Graph API (Reels container → poll → publish)
-  - Public URL host: `src/stock_pilot/upload/media_host.py` — release asset on CI, catbox.moe fallback locally
-  - Requires: `INSTAGRAM_USER_ID`, `INSTAGRAM_ACCESS_TOKEN` in `.env`
-- **YouTube** (Phase 2): `src/stock_pilot/upload/youtube.py`
+Two modes. With `ANTHROPIC_API_KEY` set, Claude filters the collected articles and
+rewrites them in Korean. Without it, the pipeline falls back to templates built from the
+quant data.
 
-## Running the Pipeline
+The LLM step exists mainly to enforce one rule: the article has to explain a move in the
+same direction as the day's price action, and it has to be about this company. Macro
+stories (oil, rates, FX) get dropped even when they rank high in the feed. The prompt is
+in `run_live_short.py::analyze_news_direction`.
 
-All paths below are relative to the repository root.
+### 5. Narration — `src/stock_snap/media/tts.py`
 
-### CLI (full pipeline with Claude API)
+Microsoft Edge TTS, voice `ko-KR-HyunsuMultilingualNeural`, one MP3 per scene. Sentence
+boundary timings come back with the audio and drive subtitle timing in the render.
+Tickers are read as Korean company names rather than spelled out in English.
+
+### 6. Video render — `src/stock_snap/media/short_video.py`
+
+Remotion CLI, composition `StockShort`. Scene durations are computed from the measured
+TTS length plus a one-second buffer, so total frame count varies per run. Audio segments
+and the BGM track are copied into `remotion/public/` before the render because Remotion
+resolves them through `staticFile()`.
+
+Render settings are `--scale 2 --height 1920 --width 1080 --crf 10 --codec h264`, which
+produces a 2160x3840 file of roughly 12-13 MB for a 110s video.
+
+### 7. Publishing — `src/stock_snap/upload/`
+
+- `media_host.py` gets the file a public URL. On CI it attaches the file to a rolling
+  GitHub Release (tag `media`); locally it uses catbox.moe.
+- `instagram.py` creates a Reels container from that URL, polls until the container is
+  ready, then publishes.
+- `youtube.py` uploads the same file as a Short, refreshing the OAuth access token from
+  the stored refresh token and tracking daily quota use.
+
+## Running
+
+Paths are relative to the repository root.
+
 ```bash
-.venv/bin/stock-pilot content --hot --upload
+python run_live_short.py              # generate and publish
+python run_live_short.py --dry-run    # generate only
+
+stock-snap content --hot --upload     # CLI path, uses the Claude API mode
 ```
 
-### Template mode (no API key)
-```bash
-.venv/bin/python run_live_short.py
+Scheduled execution is GitHub Actions only; see `README.md`.
 
-# generate only, skip uploads
-.venv/bin/python run_live_short.py --dry-run
+## Output files
+
+```
+output/{SYMBOL}_{timestamp}_short.mp4      rendered video
+output/{SYMBOL}_{timestamp}_thumb.jpg      cover image
+output/{SYMBOL}_{timestamp}_tts_s{0-4}.mp3 per-scene narration
+output/pipeline_report.json                run history: status, symbol, duration, error
 ```
 
-### Scheduled runs — GitHub Actions only
-Scheduling lives entirely in `.github/workflows/`. **Local cron is not used**; running
-both would publish the same content twice.
-
-| Workflow | Schedule (UTC) | KST | Script |
-|----------|----------------|-----|--------|
-| `daily-short.yml` | `30 0 * * 1-5` | 평일 09:30 | `run_live_short.py` |
-| `aftermarket.yml` | `15 21 * * 1-5` | 평일 06:15 (익일) | `run_aftermarket.py` |
-| `weekly-review.yml` | `30 21 * * 5` | 토요일 06:30 | `run_weekly_review.py` |
-
-- Manual trigger: `gh workflow run daily-short.yml -f dry_run=true`
-- Logs: the workflow run itself (`gh run view --log`); on failure the `output/` directory
-  is uploaded as an artifact and a Kakao message is sent.
-- Schedules are auto-disabled by GitHub after 60 days of repository inactivity —
-  check with `gh workflow list --all`, re-enable with `gh workflow enable <file>`.
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `INSTAGRAM_USER_ID` | Yes | Instagram Business account ID |
-| `INSTAGRAM_ACCESS_TOKEN` | Yes | Meta system user permanent token |
-| `ANTHROPIC_API_KEY` | For CLI mode | Claude API key for AI content generation |
-| `FINNHUB_API_KEY` | Optional | Finnhub news API |
-| `ALPHA_VANTAGE_API_KEY` | Optional | Alpha Vantage news API |
-
-## Output
-
-- Videos: `output/{SYMBOL}_{timestamp}_short.mp4`
-- Card images: `output/{SYMBOL}_{timestamp}_card.png`
-- TTS audio: `output/{SYMBOL}_{timestamp}_tts.mp3`
-- Cron logs: `output/cron.log`
+On a failed workflow run the whole `output/` directory is uploaded as a build artifact,
+which is usually the fastest way to see what the pipeline actually produced.
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| `npx not found` | Install Node.js (`nvm install 22`) |
-| Remotion render fails | `cd remotion && npm install` |
-| Instagram upload fails | Check token validity in `.env` |
-| Hot stock returns None | Market may be closed; try during trading hours |
-| Release asset upload fails (403) | The job needs `permissions: contents: write` and `GITHUB_TOKEN` in the step env |
-| catbox.moe returns 412 | Expected on CI — catbox blocks runner IP ranges; the release host is used there instead |
+| Symptom | Cause |
+|---|---|
+| `npx not found` | Node missing from PATH. On CI this means the setup-node step did not run. |
+| `Remotion render timed out` | Raise `REMOTION_RENDER_TIMEOUT`; check the job timeout too. |
+| Release asset upload 403 | Job needs `permissions: contents: write` and `GITHUB_TOKEN` in the step env. |
+| catbox returns 412 | Expected on CI. catbox blocks runner IP ranges; the release host is used there. |
+| Hot stock selection returns None | yfinance returned nothing for the whole universe, usually a transient outage. |
+| Instagram container never becomes ready | Almost always an unreachable video URL. Open it in a browser. |

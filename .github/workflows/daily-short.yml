@@ -74,13 +74,18 @@ jobs:
         if: failure()
         env:
           KAKAO_ACCESS_TOKEN: ${{ secrets.KAKAO_ACCESS_TOKEN }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ -n "$KAKAO_ACCESS_TOKEN" ]; then
-            curl -s -X POST "https://kapi.kakao.com/v2/api/talk/memo/default/send" \
-              -H "Authorization: Bearer $KAKAO_ACCESS_TOKEN" \
-              -d "template_object=%7B%22object_type%22%3A%22text%22%2C%22text%22%3A%22%5BStock+Pilot%5D+%E2%9D%8C+GitHub+Actions+%ED%8C%8C%EC%9D%B4%ED%94%84%EB%9D%BC%EC%9D%B8+%EC%8B%A4%ED%8C%A8%5Cn%EC%9B%8C%ED%81%AC%ED%94%8C%EB%A1%9C%EC%9A%B0%3A+daily-short.yml%5CnRun+ID%3A+$GITHUB_RUN_ID%5Cn%ED%99%95%EC%9D%B8%3A+https%3A%2F%2Fgithub.com%2Fwonnx%2Fstock-pilot%2Factions%2Fruns%2F$GITHUB_RUN_ID%22%2C%22link%22%3A%7B%22web_url%22%3A%22https%3A%2F%2Fgithub.com%2Fwonnx%2Fstock-pilot%2Factions%2Fruns%2F$GITHUB_RUN_ID%22%7D%7D"
+          if [ -z "$KAKAO_ACCESS_TOKEN" ]; then
+            echo "KAKAO_ACCESS_TOKEN not set; skipping notification"
+            exit 0
           fi
+          text=$(printf '[Stock Snap] daily-short.yml 실패\n확인: %s' "$RUN_URL")
+          payload=$(jq -nc --arg text "$text" --arg url "$RUN_URL" \
+            '{object_type: "text", text: $text, link: {web_url: $url}}')
+          curl -sS -X POST https://kapi.kakao.com/v2/api/talk/memo/default/send \
+            -H "Authorization: Bearer $KAKAO_ACCESS_TOKEN" \
+            --data-urlencode "template_object=$payload"
 
       - name: Upload artifacts on failure
         if: failure()
