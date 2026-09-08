@@ -125,23 +125,38 @@ stock-pilot watchlist --add SOFI PLTR    # Add symbols
 stock-pilot watchlist --remove INTC      # Remove symbols
 ```
 
-### Scheduled posting (cron)
+### Scheduled posting (GitHub Actions)
 
-Set up a daily cron job to auto-post the hottest stock at market close:
+Scheduled publishing runs **only** on GitHub Actions. Do not add a local cron job —
+running both double-posts to the same accounts.
+
+| Workflow | Schedule (UTC) | KST | Script |
+|---|---|---|---|
+| `daily-short.yml` | `30 0 * * 1-5` | 평일 09:30 | `run_live_short.py` |
+| `aftermarket.yml` | `15 21 * * 1-5` | 평일 06:15 (익일) | `run_aftermarket.py` |
+| `weekly-review.yml` | `30 21 * * 5` | 토요일 06:30 | `run_weekly_review.py` |
+
+Each run selects the hottest stock by volume spike + price change, runs quant analysis,
+generates narration and video, and uploads to Instagram Reels (@stock.snap) + YouTube Shorts.
+
+Secrets are configured under **Settings → Secrets and variables → Actions**; the required
+names are the env keys listed in each workflow's `Run pipeline` step.
+
+Manual run (including a no-upload dry run):
 
 ```bash
-# Edit crontab
-crontab -e
-
-# Add this line (runs daily at 5:00 PM EST / 6:00 AM KST next day)
-0 17 * * 1-5 cd /Users/jwkim/stock-pilot && /Users/jwkim/stock-pilot/.venv/bin/stock-pilot content --hot --upload >> /Users/jwkim/stock-pilot/output/cron.log 2>&1
+gh workflow run daily-short.yml -f dry_run=true    # generate only
+gh workflow run daily-short.yml                    # generate and publish
+gh run watch
 ```
 
-This runs every weekday (Mon-Fri) at 5:00 PM, which is after US market close (4:00 PM EST). It:
-1. Selects the hottest stock by volume spike + price change
-2. Runs quant analysis (RSI, MACD, Bollinger, etc.)
-3. Generates AI narration and 30s video
-4. Uploads to Instagram Reels (@stock.snap)
+If a scheduled workflow stops firing, check that it is still enabled — GitHub auto-disables
+schedules after 60 days without repository activity:
+
+```bash
+gh workflow list --all
+gh workflow enable daily-short.yml
+```
 
 ## Project Structure
 
@@ -204,9 +219,32 @@ stock-pilot/
 ## Testing
 
 ```bash
+# Unit tests (no secrets required)
 pytest
 pytest --cov=stock_pilot
+
+# E2E dry-run — full pipeline with mock fixtures, no API keys needed
+pytest tests/test_e2e_dry_run.py -v
+# or via npm script:
+pnpm test:e2e:dry-run
 ```
+
+### E2E Dry-Run
+
+`tests/test_e2e_dry_run.py` validates the complete pipeline flow end-to-end using mock fixtures:
+
+| What is mocked | Why |
+|---|---|
+| `select_hot_stock()` | replaces yfinance live data |
+| `MarketDataFetcher.get_ohlcv()` | replaces yfinance OHLCV download |
+| `NewsCollector.fetch_for_symbol()` | replaces Finnhub + Alpha Vantage API calls |
+| `generate_tts_with_timing()` / `generate_tts()` | replaces edge-tts / OpenAI TTS |
+| `generate_short_video()` / `generate_thumbnail()` | replaces Remotion render |
+| `upload_to_catbox()` | replaces catbox.moe HTTP upload |
+
+Fixture JSON files live in `tests/fixtures/`:
+- `finnhub_news.json` — sample Finnhub company-news API response
+- `alphavantage_news.json` — sample Alpha Vantage news sentiment API response
 
 ## License
 

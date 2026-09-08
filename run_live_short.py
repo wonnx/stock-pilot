@@ -1,12 +1,23 @@
 """Generate a short-form video from live market data and upload to Instagram Reels + YouTube Shorts."""
+import os
 import sys
 import logging
+import time
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, "src")
+REPO_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+# Dry-run: skip actual uploads (set DRY_RUN=true env var or pass --dry-run flag)
+DRY_RUN: bool = os.getenv("DRY_RUN", "false").lower() in ("1", "true", "yes") or "--dry-run" in sys.argv
+
+# Initialize Sentry early (no-op if SENTRY_DSN not set)
+from stock_pilot.utils.monitoring import init_sentry, capture_exception, set_sentry_tag, record_pipeline_run
+from stock_pilot.utils.retry import with_retry
+init_sentry()
 
 
 def send_kakao_alert(text: str) -> None:
@@ -41,6 +52,8 @@ def upload_to_catbox(file_path: Path, mime: str = "video/mp4") -> str | None:
 
 
 def run():
+    _pipeline_start = time.monotonic()
+
     from stock_pilot.hot_stock import select_hot_stock
     from stock_pilot.data.fetcher import fetcher
     from stock_pilot.analysis.indicators import TechnicalAnalyzer
@@ -57,10 +70,17 @@ def run():
         msg = "[Stock Pilot] ❌ 파이프라인 실패: 핫 종목 선정 실패"
         logger.error("Hot stock selection failed")
         send_kakao_alert(msg)
+        record_pipeline_run(
+            status="failure",
+            error="hot stock selection returned None",
+            duration_secs=time.monotonic() - _pipeline_start,
+            run_id=os.getenv("GITHUB_RUN_ID", ""),
+        )
         sys.exit(1)
 
     symbol = hot.symbol
     logger.info("Selected: %s %+.2f%% (score %.1f)", symbol, hot.change_pct, hot.hot_score)
+    set_sentry_tag("symbol", symbol)
 
     # Korean company name lookup
     COMPANY_NAMES_KO = {
@@ -374,8 +394,8 @@ def run():
     logger.info("Content generated: %s", card_title)
 
     # 5. Remotion video rendering
-    output_dir = Path("/Users/jwkim/stock-pilot/output")
-    output_dir.mkdir(exist_ok=True)
+    output_dir = REPO_ROOT / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
     from datetime import datetime
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     video_path = output_dir / f"{symbol}_{ts}_short.mp4"
@@ -432,13 +452,20 @@ def run():
     )
 
     # 4d. BGM setup — Scott Buckley "Moonlight" (fixed BGM)
-    _MOONLIGHT_SRC = Path("/Users/jwkim/stock-pilot/output/bgm_v2/04_moonlight.mp3")
-    if _MOONLIGHT_SRC.exists():
-        bgm_path = _MOONLIGHT_SRC
+    # output/bgm_v2 is the local sample library and is not tracked in the repo;
+    # remotion/public holds the committed copy so CI runners have BGM too.
+    _MOONLIGHT_CANDIDATES = [
+        REPO_ROOT / "output" / "bgm_v2" / "04_moonlight.mp3",
+        REPO_ROOT / "remotion" / "public" / "04_moonlight.mp3",
+    ]
+    bgm_path = next((c for c in _MOONLIGHT_CANDIDATES if c.exists()), None)
+    if bgm_path:
         logger.info("BGM: using Moonlight (%s)", bgm_path)
     else:
-        logger.warning("BGM file not found at %s — video will have no background music", _MOONLIGHT_SRC)
-        bgm_path = None
+        logger.warning(
+            "BGM file not found in %s — video will have no background music",
+            [str(c) for c in _MOONLIGHT_CANDIDATES],
+        )
 
     logger.info("Rendering video (%.1fs, %d frames)...", total_secs, total_frames)
     ok = generate_short_video(
@@ -454,6 +481,14 @@ def run():
         msg = f"[Stock Pilot] ❌ 파이프라인 실패: 영상 렌더링 오류 ({symbol})"
         logger.error("Video rendering failed")
         send_kakao_alert(msg)
+        record_pipeline_run(
+            status="failure",
+            symbol=symbol,
+            change_pct=change_pct,
+            error="video rendering failed",
+            duration_secs=time.monotonic() - _pipeline_start,
+            run_id=os.getenv("GITHUB_RUN_ID", ""),
+        )
         sys.exit(1)
 
     logger.info("Video rendered: %s (%.1f MB)", video_path, video_path.stat().st_size / 1024**2)
@@ -468,37 +503,76 @@ def run():
     else:
         logger.warning("Thumbnail rendering failed — uploading without cover image")
 
-    # 6. Upload to catbox.moe for public URL
+    # 6. Upload to catbox.moe for public URL (with retry)
     logger.info("Uploading video to temporary host...")
-    video_url = upload_to_catbox(video_path, "video/mp4")
+    try:
+        video_url = with_retry(
+            lambda: upload_to_catbox(video_path, "video/mp4"),
+            max_attempts=3,
+            base_delay=5.0,
+            label="catbox video upload",
+        )
+    except Exception as exc:
+        video_url = None
+        capture_exception(exc, {"step": "catbox_video_upload", "symbol": symbol})
+
     if not video_url:
         msg = f"[Stock Pilot] ❌ 파이프라인 실패: 임시 호스팅 업로드 오류 ({symbol})"
         logger.error("Temporary hosting failed")
         send_kakao_alert(msg)
+        record_pipeline_run(
+            status="failure",
+            symbol=symbol,
+            change_pct=change_pct,
+            error="catbox video upload failed",
+            duration_secs=time.monotonic() - _pipeline_start,
+            run_id=os.getenv("GITHUB_RUN_ID", ""),
+        )
         sys.exit(1)
     logger.info("Public URL: %s", video_url)
 
     cover_url = ""
     if thumb_ok and thumbnail_path.exists():
         logger.info("Uploading thumbnail to temporary host...")
-        cover_url = upload_to_catbox(thumbnail_path, "image/jpeg") or ""
+        try:
+            cover_url = with_retry(
+                lambda: upload_to_catbox(thumbnail_path, "image/jpeg") or "",
+                max_attempts=2,
+                base_delay=3.0,
+                label="catbox thumbnail upload",
+            )
+        except Exception:
+            cover_url = ""
         if cover_url:
             logger.info("Thumbnail URL: %s", cover_url)
         else:
             logger.warning("Thumbnail upload failed — uploading reel without cover")
 
-    # 7. Instagram Reels upload
-    logger.info("Uploading to Instagram Reels...")
-    reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
+    # 7. Instagram Reels upload (with retry)
+    if DRY_RUN:
+        logger.info("[dry-run] Instagram Reels upload skipped")
+        reels_ok = True
+    else:
+        logger.info("Uploading to Instagram Reels...")
+        try:
+            reels_ok = with_retry(
+                lambda: instagram.upload_reel(video_url, caption, cover_url=cover_url),
+                max_attempts=3,
+                base_delay=10.0,
+                label="instagram reels upload",
+            )
+        except Exception as exc:
+            capture_exception(exc, {"step": "instagram_upload", "symbol": symbol})
+            reels_ok = False
 
     # 8. YouTube Shorts upload
-    logger.info("Uploading to YouTube Shorts...")
     yt_title = f"{card_title} | Stock Snap 주식분석"
     yt_description = caption + "\n\n#Shorts #주식 #미국주식 #투자"
     yt_tags = [symbol, "주식", "미국주식", "투자", "Shorts", "주식분석"]
     if company_name_ko:
         yt_tags.insert(0, company_name_ko)
-    yt_video_id = youtube.upload_short(video_path, yt_title, yt_description, yt_tags)
+    logger.info("Uploading to YouTube Shorts%s...", " [dry-run]" if DRY_RUN else "")
+    yt_video_id = youtube.upload_short(video_path, yt_title, yt_description, yt_tags, dry_run=DRY_RUN)
     yt_ok = yt_video_id is not None
     if yt_ok:
         logger.info("YouTube Shorts uploaded: https://youtu.be/%s", yt_video_id)
@@ -507,6 +581,7 @@ def run():
 
     # 9. Final status report
     arrow_str = "▲" if change_pct > 0 else "▼"
+    _elapsed = time.monotonic() - _pipeline_start
     if reels_ok or yt_ok:
         platforms = []
         if reels_ok:
@@ -520,7 +595,15 @@ def run():
             f"플랫폼: {platform_str}"
         )
         send_kakao_alert(success_msg)
-        logger.info("Pipeline complete: %s", platform_str)
+        record_pipeline_run(
+            status="success",
+            symbol=symbol,
+            change_pct=change_pct,
+            platforms=[p.split("(")[0] for p in platforms],
+            duration_secs=_elapsed,
+            run_id=os.getenv("GITHUB_RUN_ID", ""),
+        )
+        logger.info("Pipeline complete: %s (%.1fs)", platform_str, _elapsed)
         print(f"\nDone!")
         print(f"Stock: {symbol} {arrow_str}{abs(change_pct):.1f}%")
         print(f"Video: {video_path}")
@@ -533,6 +616,14 @@ def run():
         msg = f"[Stock Pilot] ❌ 모든 플랫폼 업로드 실패 ({symbol})"
         logger.error("All platform uploads failed")
         send_kakao_alert(msg)
+        record_pipeline_run(
+            status="failure",
+            symbol=symbol,
+            change_pct=change_pct,
+            error="all platform uploads failed",
+            duration_secs=_elapsed,
+            run_id=os.getenv("GITHUB_RUN_ID", ""),
+        )
         sys.exit(1)
 
 
