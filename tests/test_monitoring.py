@@ -4,15 +4,12 @@ from __future__ import annotations
 
 import json
 import sys
-import time
-from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, "src")
 
 from stock_pilot.utils.retry import with_retry
-
 
 # ---------------------------------------------------------------------------
 # retry tests
@@ -74,6 +71,7 @@ def test_record_pipeline_run_creates_report(tmp_path, monkeypatch):
     monkeypatch.setenv("CONTENT_OUTPUT_DIR", str(tmp_path))
     # Re-import to pick up monkeypatched env
     import importlib
+
     import stock_pilot.utils.monitoring as mon
     importlib.reload(mon)
 
@@ -100,6 +98,7 @@ def test_record_pipeline_run_creates_report(tmp_path, monkeypatch):
 def test_record_pipeline_run_trims_to_max_history(tmp_path, monkeypatch):
     monkeypatch.setenv("CONTENT_OUTPUT_DIR", str(tmp_path))
     import importlib
+
     import stock_pilot.utils.monitoring as mon
     importlib.reload(mon)
     mon._MAX_HISTORY = 5
@@ -115,6 +114,7 @@ def test_record_pipeline_run_trims_to_max_history(tmp_path, monkeypatch):
 def test_init_sentry_no_dsn(monkeypatch):
     monkeypatch.delenv("SENTRY_DSN", raising=False)
     import importlib
+
     import stock_pilot.utils.monitoring as mon
     importlib.reload(mon)
 

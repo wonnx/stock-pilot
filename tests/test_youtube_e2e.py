@@ -1,14 +1,10 @@
 """YouTube E2E 테스트 — dry-run 모드로 실제 업로드 없이 전체 파이프라인 검증."""
 from __future__ import annotations
 
-import sys
 import os
-import json
-import tempfile
+import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -55,8 +51,7 @@ class TestYouTubeUploaderDryRun:
 
     def test_shorts_tag_appended(self, tmp_path):
         """upload_short가 #Shorts 태그를 자동으로 추가해야 함 (내부 로직 검증)."""
-        from stock_pilot.upload.youtube import YouTubeUploader
-        uploader = self._make_uploader()
+        self._make_uploader()
         tags: list[str] = []
         # Simulate tag normalization logic
         if "#Shorts" not in tags:
