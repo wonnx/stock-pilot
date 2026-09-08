@@ -253,28 +253,19 @@ def run():
         sys.exit(1)
     logger.info("Video rendered: %s", video_path)
 
-    # 9. 업로드 (catbox → Instagram → YouTube)
-    import httpx
+    # 9. 업로드 (공개 URL 확보 → Instagram → YouTube)
+    from stock_pilot.upload.media_host import publish_media
 
-    def upload_to_catbox(file_path: Path, mime: str = "video/mp4") -> str | None:
+    def _host(file_path: Path, mime: str = "video/mp4") -> str | None:
         try:
-            with open(file_path, "rb") as f:
-                resp = httpx.post(
-                    "https://catbox.moe/user/api.php",
-                    data={"reqtype": "fileupload"},
-                    files={"fileToUpload": (file_path.name, f, mime)},
-                    timeout=120,
-                )
-            resp.raise_for_status()
-            url = resp.text.strip()
-            return url if url.startswith("https://") else None
+            return publish_media(file_path, mime)
         except Exception as e:
-            logger.error("catbox upload failed: %s", e)
+            logger.error("media host upload failed: %s", e)
             return None
 
-    video_url = upload_to_catbox(video_path)
+    video_url = _host(video_path)
     if not video_url:
-        logger.error("catbox upload failed — aborting")
+        logger.error("media host upload failed — aborting")
         sys.exit(1)
 
     # 썸네일
@@ -282,7 +273,7 @@ def run():
     thumbnail_path = output_dir / f"{symbol}_{ts}_thumb.jpg"
     cover_url = ""
     if generate_thumbnail(pkg, thumbnail_path):
-        cover_url = upload_to_catbox(thumbnail_path, "image/jpeg") or ""
+        cover_url = _host(thumbnail_path, "image/jpeg") or ""
 
     # Instagram Reels 업로드
     reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
