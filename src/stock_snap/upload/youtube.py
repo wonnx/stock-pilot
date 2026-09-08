@@ -8,7 +8,7 @@ from pathlib import Path
 
 import httpx
 
-from stock_pilot.utils.config import config
+from stock_snap.utils.config import config
 
 logger = logging.getLogger(__name__)
 YT_UPLOAD_URL = "https://www.googleapis.com/upload/youtube/v3/videos"

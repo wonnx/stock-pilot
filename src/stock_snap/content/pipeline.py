@@ -82,7 +82,7 @@ class ContentPipeline:
         Returns:
             PipelineResult or None if hot stock selection fails.
         """
-        from stock_pilot.hot_stock import select_hot_stock
+        from stock_snap.hot_stock import select_hot_stock
 
         hot = select_hot_stock()
         if not hot:
@@ -101,11 +101,11 @@ class ContentPipeline:
         """Run full pipeline for one symbol."""
         result = PipelineResult(symbol=symbol)
 
-        from stock_pilot.analysis.indicators import TechnicalAnalyzer
-        from stock_pilot.content.generator import generator
-        from stock_pilot.data.fetcher import fetcher
-        from stock_pilot.news.collector import NewsCollector
-        from stock_pilot.news.sentiment import SentimentAnalyzer
+        from stock_snap.analysis.indicators import TechnicalAnalyzer
+        from stock_snap.content.generator import generator
+        from stock_snap.data.fetcher import fetcher
+        from stock_snap.news.collector import NewsCollector
+        from stock_snap.news.sentiment import SentimentAnalyzer
 
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -166,7 +166,7 @@ class ContentPipeline:
         # 6. Card news image
         card_path = self._out / f"{symbol}_{ts}_card.png"
         try:
-            from stock_pilot.media.card_news import generate_card_news
+            from stock_snap.media.card_news import generate_card_news
             result.card_news_ok = generate_card_news(pkg, card_path)
             if result.card_news_ok:
                 result.card_path = card_path
@@ -176,7 +176,7 @@ class ContentPipeline:
         # 7. TTS
         tts_path = self._out / f"{symbol}_{ts}_tts.mp3"
         try:
-            from stock_pilot.media.tts import generate_tts
+            from stock_snap.media.tts import generate_tts
             result.tts_ok = generate_tts(pkg.script, tts_path)
         except Exception as e:
             result.errors.append(f"TTS: {e}")
@@ -184,7 +184,7 @@ class ContentPipeline:
         # 8. 30-second short-form video (Remotion)
         video_path = self._out / f"{symbol}_{ts}_reel.mp4"
         try:
-            from stock_pilot.media.short_video import generate_short_video
+            from stock_snap.media.short_video import generate_short_video
             audio = tts_path if result.tts_ok else None
             result.video_ok = generate_short_video(pkg, video_path, audio)
             if result.video_ok:
@@ -197,7 +197,7 @@ class ContentPipeline:
             # Instagram Reels upload (video first)
             if result.video_ok and result.video_path:
                 try:
-                    from stock_pilot.upload.instagram import instagram
+                    from stock_snap.upload.instagram import instagram
                     # Try uploading video to catbox.moe for public URL
                     video_url = _upload_to_catbox(result.video_path, mime="video/mp4")
                     if not video_url:
@@ -218,7 +218,7 @@ class ContentPipeline:
             # YouTube Shorts upload
             if result.video_ok and result.video_path:
                 try:
-                    from stock_pilot.upload.youtube import youtube
+                    from stock_snap.upload.youtube import youtube
                     tags = [symbol, "stocks", "USstocks", "shorts", "YouTubeShorts", "stockmarket"]
                     vid_id = youtube.upload_short(result.video_path, pkg.card_title, pkg.caption, tags)
                     result.youtube_ok = vid_id is not None

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "stock-pilot"
+name = "stock-snap"
 version = "0.1.0"
 description = "US stock analysis and alert service for short/swing trading"
 requires-python = ">=3.12"
@@ -36,10 +36,10 @@ dev = [
 ]
 
 [project.scripts]
-stock-pilot = "stock_pilot.cli:main"
+stock-snap = "stock_snap.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/stock_pilot"]
+packages = ["src/stock_snap"]
 
 [tool.ruff]
 line-length = 100
@@ -61,7 +61,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["src/stock_pilot"]
+source = ["src/stock_snap"]
 
 [dependency-groups]
 dev = [

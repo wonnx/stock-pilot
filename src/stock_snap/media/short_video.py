@@ -9,7 +9,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from stock_pilot.content.generator import ContentPackage
+from stock_snap.content.generator import ContentPackage
 
 logger = logging.getLogger(__name__)
 REMOTION_DIR = Path(__file__).parent.parent.parent.parent / "remotion"

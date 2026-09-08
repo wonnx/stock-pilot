@@ -12,9 +12,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from stock_pilot.upload import media_host
+from stock_snap.upload import media_host
 
-RELEASE_URL = "https://github.com/wonnx/stock-pilot/releases/download/media/TSLA_short.mp4"
+RELEASE_URL = "https://github.com/wonnx/stock-snap/releases/download/media/TSLA_short.mp4"
 
 
 class _Resp:
@@ -47,7 +47,7 @@ def video(tmp_path) -> Path:
 
 @pytest.fixture
 def gh_env():
-    env = {"GITHUB_TOKEN": "ghs_test", "GITHUB_REPOSITORY": "wonnx/stock-pilot"}
+    env = {"GITHUB_TOKEN": "ghs_test", "GITHUB_REPOSITORY": "wonnx/stock-snap"}
     with patch.dict(os.environ, env, clear=False):
         yield
 

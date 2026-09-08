@@ -7,7 +7,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from stock_pilot.hot_stock import (
+from stock_snap.hot_stock import (
     HotStockResult,
     _build_results,
     _score,
@@ -167,19 +167,19 @@ class TestSelectHotStock:
         return make_single_ohlcv(25, close_start=100, close_end=110, vol_spike_last=True)
 
     def test_returns_hot_stock_result(self) -> None:
-        with patch("stock_pilot.hot_stock._download", return_value=self._mock_download_single()):
+        with patch("stock_snap.hot_stock._download", return_value=self._mock_download_single()):
             result = select_hot_stock(universe=["NVDA"])
         assert result is not None
         assert isinstance(result, HotStockResult)
         assert result.symbol == "NVDA"
 
     def test_returns_none_on_download_failure(self) -> None:
-        with patch("stock_pilot.hot_stock._download", return_value=None):
+        with patch("stock_snap.hot_stock._download", return_value=None):
             result = select_hot_stock(universe=["AAPL"])
         assert result is None
 
     def test_returns_none_on_empty_dataframe(self) -> None:
-        with patch("stock_pilot.hot_stock._download", return_value=pd.DataFrame()):
+        with patch("stock_snap.hot_stock._download", return_value=pd.DataFrame()):
             result = select_hot_stock(universe=["AAPL"])
         assert result is None
 
@@ -191,14 +191,14 @@ class TestSelectTopN:
     def test_top_n_returns_n_results(self) -> None:
         symbols = ["AAPL", "MSFT", "NVDA", "TSLA", "AMD"]
         raw = make_multi_ohlcv(symbols)
-        with patch("stock_pilot.hot_stock._download", return_value=raw):
+        with patch("stock_snap.hot_stock._download", return_value=raw):
             results = select_top_n(n=3, universe=symbols)
         assert len(results) == 3
 
     def test_results_sorted_by_score_descending(self) -> None:
         symbols = ["AAPL", "MSFT", "NVDA"]
         raw = make_multi_ohlcv(symbols)
-        with patch("stock_pilot.hot_stock._download", return_value=raw):
+        with patch("stock_snap.hot_stock._download", return_value=raw):
             results = select_top_n(n=3, universe=symbols)
         scores = [r.hot_score for r in results]
         assert scores == sorted(scores, reverse=True)
@@ -206,20 +206,20 @@ class TestSelectTopN:
     def test_top_n_larger_than_universe(self) -> None:
         symbols = ["AAPL", "MSFT"]
         raw = make_multi_ohlcv(symbols)
-        with patch("stock_pilot.hot_stock._download", return_value=raw):
+        with patch("stock_snap.hot_stock._download", return_value=raw):
             results = select_top_n(n=10, universe=symbols)
         # Can't return more than available symbols
         assert len(results) <= len(symbols)
 
     def test_empty_on_download_failure(self) -> None:
-        with patch("stock_pilot.hot_stock._download", return_value=None):
+        with patch("stock_snap.hot_stock._download", return_value=None):
             results = select_top_n(n=5, universe=["AAPL"])
         assert results == []
 
     def test_select_hot_stock_uses_top_1(self) -> None:
         symbols = ["AAPL", "MSFT", "NVDA"]
         raw = make_multi_ohlcv(symbols)
-        with patch("stock_pilot.hot_stock._download", return_value=raw):
+        with patch("stock_snap.hot_stock._download", return_value=raw):
             top1 = select_hot_stock(universe=symbols)
             top_n = select_top_n(n=1, universe=symbols)
         assert top1 is not None

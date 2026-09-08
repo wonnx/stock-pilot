@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
-    from stock_pilot.analytics.instagram_insights import InstagramInsights, generate_weekly_report
+    from stock_snap.analytics.instagram_insights import InstagramInsights, generate_weekly_report
 
     insights = InstagramInsights()
 

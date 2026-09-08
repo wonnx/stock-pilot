@@ -137,14 +137,14 @@ def run():
     """주간 리뷰 파이프라인 실행."""
     import datetime
 
-    from stock_pilot.analysis.indicators import TechnicalAnalyzer
-    from stock_pilot.content.generator import ContentPackage
-    from stock_pilot.data.fetcher import StockDataFetcher
-    from stock_pilot.media.short_video import generate_short_video, generate_thumbnail
-    from stock_pilot.media.tts import generate_tts_with_timing
-    from stock_pilot.news.collector import NewsCollector
-    from stock_pilot.upload.instagram import instagram
-    from stock_pilot.upload.youtube import youtube
+    from stock_snap.analysis.indicators import TechnicalAnalyzer
+    from stock_snap.content.generator import ContentPackage
+    from stock_snap.data.fetcher import StockDataFetcher
+    from stock_snap.media.short_video import generate_short_video, generate_thumbnail
+    from stock_snap.media.tts import generate_tts_with_timing
+    from stock_snap.news.collector import NewsCollector
+    from stock_snap.upload.instagram import instagram
+    from stock_snap.upload.youtube import youtube
 
     # 1. 주간 데이터 수집
     weekly_data = fetch_weekly_data()
@@ -205,7 +205,7 @@ def run():
     )
     hashtags = f"#{symbol} #주간리뷰 #미국주식 #주식투자 #위클리"
     caption = (
-        f"📊 이번 주 미국 증시 주간 리뷰\n\n"
+        f"이번 주 미국 증시 주간 리뷰\n\n"
         f"{card_subtitle}\n\n{hashtags}\n⚠️ 본 콘텐츠는 투자 조언이 아닙니다."
     )
 
@@ -265,7 +265,7 @@ def run():
 
     # 9. 업로드
 
-    from stock_pilot.upload.media_host import publish_media
+    from stock_snap.upload.media_host import publish_media
 
     def _host(file_path: Path, mime: str = "video/mp4") -> str | None:
         try:

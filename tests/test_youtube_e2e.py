@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 class TestYouTubeUploaderDryRun:
     def _make_uploader(self):
-        from stock_pilot.upload.youtube import YouTubeUploader
+        from stock_snap.upload.youtube import YouTubeUploader
         uploader = YouTubeUploader.__new__(YouTubeUploader)
         uploader._client_id = ""
         uploader._client_secret = ""
@@ -34,7 +34,7 @@ class TestYouTubeUploaderDryRun:
 
     def test_dry_run_skips_quota_check(self, tmp_path):
         """dry-run이면 quota 파일을 수정하지 않아야 함."""
-        from stock_pilot.upload.youtube import _load_quota
+        from stock_snap.upload.youtube import _load_quota
         uploader = self._make_uploader()
         video = tmp_path / "test.mp4"
         video.write_bytes(b"\x00" * 100)
@@ -67,7 +67,7 @@ class TestYouTubeUploaderDryRun:
 class TestYouTubeOAuthRefresh:
     def test_refresh_token_flow_called(self):
         """refresh token이 설정되면 _refresh_access_token이 호출되어야 함."""
-        from stock_pilot.upload.youtube import YouTubeUploader
+        from stock_snap.upload.youtube import YouTubeUploader
         uploader = YouTubeUploader.__new__(YouTubeUploader)
         uploader._client_id = "client_id"
         uploader._client_secret = "client_secret"
@@ -76,7 +76,7 @@ class TestYouTubeOAuthRefresh:
         uploader._access_token = None
         uploader._token_expiry = 0.0
 
-        with patch("stock_pilot.upload.youtube.httpx.post") as mock_post:
+        with patch("stock_snap.upload.youtube.httpx.post") as mock_post:
             mock_resp = MagicMock()
             mock_resp.json.return_value = {"access_token": "new_token", "expires_in": 3600}
             mock_post.return_value = mock_resp
@@ -86,7 +86,7 @@ class TestYouTubeOAuthRefresh:
 
     def test_static_token_fallback(self):
         """refresh token 없으면 static token을 반환해야 함."""
-        from stock_pilot.upload.youtube import YouTubeUploader
+        from stock_snap.upload.youtube import YouTubeUploader
         uploader = YouTubeUploader.__new__(YouTubeUploader)
         uploader._client_id = ""
         uploader._client_secret = ""
@@ -98,7 +98,7 @@ class TestYouTubeOAuthRefresh:
         assert token == "static-token"
 
     def test_no_credentials_returns_none(self):
-        from stock_pilot.upload.youtube import YouTubeUploader
+        from stock_snap.upload.youtube import YouTubeUploader
         uploader = YouTubeUploader.__new__(YouTubeUploader)
         uploader._client_id = ""
         uploader._client_secret = ""
@@ -113,10 +113,10 @@ class TestYouTubeOAuthRefresh:
 class TestYouTubeQuota:
     def test_quota_exceeded_blocks_upload(self, tmp_path, monkeypatch):
         """quota 초과 시 upload_short가 None을 반환해야 함."""
-        from stock_pilot.upload import youtube as yt_module
+        from stock_snap.upload import youtube as yt_module
         fake_quota = {"date": str(__import__("datetime").date.today()), "used": 9000}
         monkeypatch.setattr(yt_module, "_load_quota", lambda: fake_quota)
-        from stock_pilot.upload.youtube import YouTubeUploader
+        from stock_snap.upload.youtube import YouTubeUploader
         uploader = YouTubeUploader.__new__(YouTubeUploader)
         uploader._client_id = ""
         uploader._client_secret = ""
@@ -131,10 +131,10 @@ class TestYouTubeQuota:
 
     def test_quota_within_limit_passes(self, monkeypatch):
         """quota 여유 있을 때 _check_quota가 True를 반환해야 함."""
-        from stock_pilot.upload import youtube as yt_module
+        from stock_snap.upload import youtube as yt_module
         fake_quota = {"date": str(__import__("datetime").date.today()), "used": 0}
         monkeypatch.setattr(yt_module, "_load_quota", lambda: fake_quota)
-        from stock_pilot.upload.youtube import YouTubeUploader
+        from stock_snap.upload.youtube import YouTubeUploader
         uploader = YouTubeUploader.__new__(YouTubeUploader)
         assert uploader._check_quota()
 
@@ -145,7 +145,7 @@ class TestYouTubeQuota:
 
 class TestYouTubeAnalytics:
     def _make_analytics(self):
-        from stock_pilot.analytics.youtube_analytics import YouTubeAnalytics
+        from stock_snap.analytics.youtube_analytics import YouTubeAnalytics
         analytics = YouTubeAnalytics.__new__(YouTubeAnalytics)
         uploader_mock = MagicMock()
         uploader_mock._get_access_token.return_value = "fake-token"
@@ -168,7 +168,7 @@ class TestYouTubeAnalytics:
                 }
             ]
         }
-        with patch("stock_pilot.analytics.youtube_analytics.httpx.get") as mock_get:
+        with patch("stock_snap.analytics.youtube_analytics.httpx.get") as mock_get:
             mock_resp = MagicMock()
             mock_resp.json.return_value = fake_response
             mock_get.return_value = mock_resp

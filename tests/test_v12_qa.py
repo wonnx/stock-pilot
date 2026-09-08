@@ -75,14 +75,14 @@ class TestTC002_TtsKoreanName:
 
     def test_tts_generate_function_exists(self):
         """TTS 생성 함수가 존재하는지 확인."""
-        from stock_pilot.media.tts import generate_tts, generate_tts_with_timing
+        from stock_snap.media.tts import generate_tts, generate_tts_with_timing
         assert callable(generate_tts)
         assert callable(generate_tts_with_timing)
 
     def test_tts_returns_bool(self):
         """TTS 함수가 bool을 반환하는지 확인 (실제 API 호출 없이 mock)."""
-        from stock_pilot.media.tts import generate_tts
-        with patch("stock_pilot.media.tts._generate_edge_tts") as mock_tts:
+        from stock_snap.media.tts import generate_tts
+        with patch("stock_snap.media.tts._generate_edge_tts") as mock_tts:
             mock_tts.return_value = True
             result = generate_tts("엔비디아 주가가 급등했습니다.", Path("/tmp/test.mp3"))
             assert isinstance(result, bool)
@@ -347,7 +347,7 @@ class TestV12BeforeAfter:
 
     def test_fix1_thumbnail_function_exists(self):
         """Fix 1: 썸네일 생성 함수가 존재하고 호출 가능한지 확인."""
-        from stock_pilot.media.short_video import generate_thumbnail
+        from stock_snap.media.short_video import generate_thumbnail
         assert callable(generate_thumbnail)
 
     def test_fix2_tts_uses_korean_name(self):
@@ -424,7 +424,7 @@ def run_all_tests():
 
     LINE = "=" * 60
     print(f"\n{LINE}")
-    print("Stock Pilot v12 QA 자동화 테스트")
+    print("Stock Snap v12 QA 자동화 테스트")
     print(LINE)
 
     total = passed = failed = skipped = 0
@@ -438,7 +438,7 @@ def run_all_tests():
             test_name = f"{cls.__name__}.{method}"
             try:
                 getattr(instance, method)()
-                print(f"  ✅ PASS  {test_name}")
+                print(f"  PASS  {test_name}")
                 passed += 1
                 results.append((test_name, "PASS", None))
             except Exception as e:
@@ -448,7 +448,7 @@ def run_all_tests():
                     skipped += 1
                     results.append((test_name, "SKIP", err_msg))
                 else:
-                    print(f"  ❌ FAIL  {test_name}")
+                    print(f"  FAIL  {test_name}")
                     print(f"         {err_msg}")
                     failed += 1
                     results.append((test_name, "FAIL", err_msg))

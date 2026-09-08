@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from stock_pilot.analysis.indicators import (
+from stock_snap.analysis.indicators import (
     TechnicalAnalyzer,
     TechnicalIndicators,
     TrendLine,

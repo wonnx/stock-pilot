@@ -1,8 +1,7 @@
-# Stock Pilot 숏폼 영상 파이프라인 — Test Case 체계
+# Stock Snap 숏폼 영상 파이프라인 — Test Case 체계
 
 > 작성일: 2026-03-12
 > 대상 버전: v12 (커밋 81ec333)
-> 담당: QA Engineer
 
 ---
 
@@ -13,7 +12,7 @@
 | **TC ID** | TC-001 |
 | **카테고리** | 썸네일 생성 |
 | **목적** | 영상 생성 후 썸네일 이미지가 정상적으로 존재하는지 확인 |
-| **관련 파일** | `src/stock_pilot/media/short_video.py:generate_thumbnail()` |
+| **관련 파일** | `src/stock_snap/media/short_video.py:generate_thumbnail()` |
 
 ### 사전 조건
 - Node.js + `npx remotion` 설치됨
@@ -45,7 +44,7 @@
 | **TC ID** | TC-002 |
 | **카테고리** | TTS 음성 출력 |
 | **목적** | TTS 스크립트에서 종목코드(티커) 대신 한글 기업명이 읽히는지 확인 |
-| **관련 파일** | `run_live_short.py` (line 232, 246), `src/stock_pilot/media/tts.py` |
+| **관련 파일** | `run_live_short.py` (line 232, 246), `src/stock_snap/media/tts.py` |
 
 ### 사전 조건
 - `COMPANY_NAMES_KO` 딕셔너리에 테스트 종목 등록됨 (예: NVDA → "엔비디아")
@@ -190,7 +189,7 @@
 | **TC ID** | TC-006 |
 | **카테고리** | Instagram 업로드 |
 | **목적** | 영상 파일이 Instagram Reels에 정상 업로드되는지 확인 |
-| **관련 파일** | `src/stock_pilot/upload/instagram.py` |
+| **관련 파일** | `src/stock_snap/upload/instagram.py` |
 
 ### 사전 조건 (환경 설정 필요)
 - `INSTAGRAM_ACCESS_TOKEN` 환경 변수 설정
@@ -220,8 +219,8 @@
 | TC ID | 이름 | 자동화 가능 | 환경 의존성 | 우선순위 |
 |-------|------|------------|------------|---------|
 | TC-001 | 썸네일 생성 | 부분 (파일 존재 확인) | Node.js, Remotion | High |
-| TC-002 | TTS 한글 기업명 | ✅ 완전 자동화 | edge-tts 또는 OpenAI API | Critical |
+| TC-002 | TTS 한글 기업명 | 완전 자동화 | edge-tts 또는 OpenAI API | Critical |
 | TC-003 | BGM 연속 재생 | 부분 (코드 검사) | ffprobe (심화) | High |
-| TC-004 | 뉴스 방향 일관성 | ✅ 완전 자동화 | ANTHROPIC_API_KEY | High |
-| TC-005 | 캡션 상세화 | ✅ 완전 자동화 | 없음 | Medium |
+| TC-004 | 뉴스 방향 일관성 | 완전 자동화 | ANTHROPIC_API_KEY | High |
+| TC-005 | 캡션 상세화 | 완전 자동화 | 없음 | Medium |
 | TC-006 | Instagram 업로드 | 부분 (토큰 필요) | IG 계정 설정 | Low (수동 검증) |
