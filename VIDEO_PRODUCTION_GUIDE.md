@@ -11,7 +11,7 @@
 - **대상**: 한국인 시청자
 - **목적**: 미국 주식 핫 종목에 대한 뉴스 분석 + 차트 분석 숏폼 영상
 - **채널**: Instagram Reels (@stock.snap)
-- **스케줄**: 평일 22:00, 07:00 (KST) 자동 생성 + 업로드
+- **스케줄**: 평일 09:30 (KST) 자동 생성 + 업로드 — GitHub Actions `daily-short.yml`
 
 ---
 
@@ -117,7 +117,7 @@
 
 ### 4.2 업로드
 
-- catbox.moe → Instagram Graph API 경유
+- GitHub Release 에셋(공개 URL) → Instagram Graph API 경유
 - 썸네일 별도 업로드
 - 업로드 실패 시 로그 확인 후 재시도
 

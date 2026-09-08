@@ -57,7 +57,8 @@ Hot Stock Selection → Quant Analysis → News Collection → Content Generatio
 
 ### 6. Upload
 - **Instagram**: `src/stock_pilot/upload/instagram.py`
-  - Video → catbox.moe (public URL) → Instagram Graph API (Reels container → poll → publish)
+  - Video → GitHub Release asset (public URL) → Instagram Graph API (Reels container → poll → publish)
+  - Public URL host: `src/stock_pilot/upload/media_host.py` — release asset on CI, catbox.moe fallback locally
   - Requires: `INSTAGRAM_USER_ID`, `INSTAGRAM_ACCESS_TOKEN` in `.env`
 - **YouTube** (Phase 2): `src/stock_pilot/upload/youtube.py`
 
@@ -119,4 +120,5 @@ both would publish the same content twice.
 | Remotion render fails | `cd remotion && npm install` |
 | Instagram upload fails | Check token validity in `.env` |
 | Hot stock returns None | Market may be closed; try during trading hours |
-| catbox.moe upload fails | Retry or check network; falls back to litterbox |
+| Release asset upload fails (403) | The job needs `permissions: contents: write` and `GITHUB_TOKEN` in the step env |
+| catbox.moe returns 412 | Expected on CI — catbox blocks runner IP ranges; the release host is used there instead |

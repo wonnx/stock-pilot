@@ -14,6 +14,8 @@ on:
 jobs:
   weekly-review:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 60
 
     steps:
@@ -55,6 +57,9 @@ jobs:
           KAKAO_ACCESS_TOKEN: ${{ secrets.KAKAO_ACCESS_TOKEN }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          # Release assets give the rendered video a public URL for the Graph API
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: python run_weekly_review.py
 
