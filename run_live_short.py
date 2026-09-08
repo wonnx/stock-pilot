@@ -17,6 +17,7 @@ DRY_RUN: bool = os.getenv("DRY_RUN", "false").lower() in ("1", "true", "yes") or
 # Initialize Sentry early (no-op if SENTRY_DSN not set)
 from stock_pilot.utils.monitoring import init_sentry, capture_exception, set_sentry_tag, record_pipeline_run
 from stock_pilot.utils.retry import with_retry
+from stock_pilot.upload.media_host import publish_media
 init_sentry()
 
 
@@ -28,7 +29,6 @@ def send_kakao_alert(text: str) -> None:
     except Exception as e:
         logger.warning("Kakao alert failed: %s", e)
 
-import httpx
 
 def translate_to_korean(text: str) -> str:
     """Translate English text to Korean using Google Translate."""
@@ -37,19 +37,6 @@ def translate_to_korean(text: str) -> str:
         return GoogleTranslator(source='en', target='ko').translate(text)
     except Exception:
         return text  # Fallback: return original English text
-
-def upload_to_catbox(file_path: Path, mime: str = "video/mp4") -> str | None:
-    with open(file_path, "rb") as f:
-        resp = httpx.post(
-            "https://catbox.moe/user/api.php",
-            data={"reqtype": "fileupload"},
-            files={"fileToUpload": (file_path.name, f, mime)},
-            timeout=120,
-        )
-    resp.raise_for_status()
-    url = resp.text.strip()
-    return url if url.startswith("https://") else None
-
 
 def run():
     _pipeline_start = time.monotonic()
@@ -503,18 +490,18 @@ def run():
     else:
         logger.warning("Thumbnail rendering failed — uploading without cover image")
 
-    # 6. Upload to catbox.moe for public URL (with retry)
+    # 6. Publish to a public URL for the Graph API to fetch (with retry)
     logger.info("Uploading video to temporary host...")
     try:
         video_url = with_retry(
-            lambda: upload_to_catbox(video_path, "video/mp4"),
+            lambda: publish_media(video_path, "video/mp4"),
             max_attempts=3,
             base_delay=5.0,
-            label="catbox video upload",
+            label="video host upload",
         )
     except Exception as exc:
         video_url = None
-        capture_exception(exc, {"step": "catbox_video_upload", "symbol": symbol})
+        capture_exception(exc, {"step": "video_host_upload", "symbol": symbol})
 
     if not video_url:
         msg = f"[Stock Pilot] ❌ 파이프라인 실패: 임시 호스팅 업로드 오류 ({symbol})"
@@ -524,7 +511,7 @@ def run():
             status="failure",
             symbol=symbol,
             change_pct=change_pct,
-            error="catbox video upload failed",
+            error="video host upload failed",
             duration_secs=time.monotonic() - _pipeline_start,
             run_id=os.getenv("GITHUB_RUN_ID", ""),
         )
@@ -536,10 +523,10 @@ def run():
         logger.info("Uploading thumbnail to temporary host...")
         try:
             cover_url = with_retry(
-                lambda: upload_to_catbox(thumbnail_path, "image/jpeg") or "",
+                lambda: publish_media(thumbnail_path, "image/jpeg") or "",
                 max_attempts=2,
                 base_delay=3.0,
-                label="catbox thumbnail upload",
+                label="thumbnail host upload",
             )
         except Exception:
             cover_url = ""

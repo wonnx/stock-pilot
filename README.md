@@ -240,7 +240,7 @@ pnpm test:e2e:dry-run
 | `NewsCollector.fetch_for_symbol()` | replaces Finnhub + Alpha Vantage API calls |
 | `generate_tts_with_timing()` / `generate_tts()` | replaces edge-tts / OpenAI TTS |
 | `generate_short_video()` / `generate_thumbnail()` | replaces Remotion render |
-| `upload_to_catbox()` | replaces catbox.moe HTTP upload |
+| `publish_media()` | replaces the public-URL upload (GitHub Release asset / catbox) |
 
 Fixture JSON files live in `tests/fixtures/`:
 - `finnhub_news.json` — sample Finnhub company-news API response

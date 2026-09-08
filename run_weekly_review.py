@@ -137,8 +137,6 @@ def run():
     """주간 리뷰 파이프라인 실행."""
     import datetime
 
-    import httpx
-
     from stock_pilot.analysis.indicators import TechnicalAnalyzer
     from stock_pilot.content.generator import ContentPackage
     from stock_pilot.data.fetcher import StockDataFetcher
@@ -267,31 +265,24 @@ def run():
 
     # 9. 업로드
 
-    def upload_to_catbox(file_path: Path, mime: str = "video/mp4") -> str | None:
+    from stock_pilot.upload.media_host import publish_media
+
+    def _host(file_path: Path, mime: str = "video/mp4") -> str | None:
         try:
-            with open(file_path, "rb") as f:
-                resp = httpx.post(
-                    "https://catbox.moe/user/api.php",
-                    data={"reqtype": "fileupload"},
-                    files={"fileToUpload": (file_path.name, f, mime)},
-                    timeout=120,
-                )
-            resp.raise_for_status()
-            url = resp.text.strip()
-            return url if url.startswith("https://") else None
+            return publish_media(file_path, mime)
         except Exception as e:
-            logger.error("catbox upload failed: %s", e)
+            logger.error("media host upload failed: %s", e)
             return None
 
-    video_url = upload_to_catbox(video_path)
+    video_url = _host(video_path)
     if not video_url:
-        logger.error("catbox upload failed — aborting")
+        logger.error("media host upload failed — aborting")
         sys.exit(1)
 
     thumbnail_path = output_dir / f"{symbol}_{ts}_thumb.jpg"
     cover_url = ""
     if generate_thumbnail(pkg, thumbnail_path):
-        cover_url = upload_to_catbox(thumbnail_path, "image/jpeg") or ""
+        cover_url = _host(thumbnail_path, "image/jpeg") or ""
 
     reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
     yt_title = f"{card_title} | Stock Snap 주간리뷰"
