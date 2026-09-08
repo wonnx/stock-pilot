@@ -13,9 +13,9 @@ from __future__ import annotations
 import math
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -71,7 +71,7 @@ def _make_hot_stock_result():
 
 def _make_news_items():
     from stock_pilot.news.collector import NewsItem
-    now = datetime.now(tz=timezone.utc)
+    now = datetime.now(tz=UTC)
     return [
         NewsItem(
             title="NVDA 4분기 실적 어닝서프라이즈 — AI 칩 수요 역대 최고",
@@ -172,7 +172,6 @@ class TestE2EDryRun:
 
     def _run_with_dry_run(self):
         """Run the pipeline in dry-run mode and return (exit_code_or_none, mock_catbox)."""
-        import importlib
         import run_live_short
 
         mock_catbox = MagicMock(return_value="https://files.catbox.moe/dryrun_test.mp4")

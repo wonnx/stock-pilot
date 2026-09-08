@@ -4,8 +4,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -246,7 +245,7 @@ def generate_weekly_report(
 
     # ── 리포트 작성 ──
     lines = [
-        f"# 주간 Instagram 성과 리포트",
+        "# 주간 Instagram 성과 리포트",
         f"생성일: {datetime.now().strftime('%Y-%m-%d')}  |  기간: 최근 수집 데이터 기준",
         "",
         "## 계정 요약",
@@ -336,12 +335,12 @@ def _extract_tickers(text: str) -> list[str]:
 
 def _days_ago_unix(days: int) -> int:
     from datetime import timedelta
-    dt = datetime.now(tz=timezone.utc) - timedelta(days=days)
+    dt = datetime.now(tz=UTC) - timedelta(days=days)
     return int(dt.timestamp())
 
 
 def _now_unix() -> int:
-    return int(datetime.now(tz=timezone.utc).timestamp())
+    return int(datetime.now(tz=UTC).timestamp())
 
 
 def _generate_suggestions(

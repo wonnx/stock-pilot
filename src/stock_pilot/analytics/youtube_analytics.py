@@ -4,7 +4,7 @@ from __future__ import annotations
 import csv
 import json
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -178,7 +178,7 @@ class YouTubeAnalytics:
             body = resp.json()
             col_headers = [h["name"] for h in body.get("columnHeaders", [])]
             rows = body.get("rows", [])
-            return [dict(zip(col_headers, row)) for row in rows]
+            return [dict(zip(col_headers, row, strict=False)) for row in rows]
         except Exception as e:
             logger.warning("YouTube Analytics API 호출 실패 (Analytics API 미활성화일 수 있음): %s", e)
             return []
