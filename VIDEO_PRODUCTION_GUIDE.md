@@ -148,14 +148,19 @@
 ## 7. 실행 방법
 
 ```bash
-# 수동 실행
-cd /Users/jwkim/stock-pilot
+# 수동 실행 (저장소 루트에서)
 .venv/bin/python run_live_short.py
 
-# 자동 실행 (cron)
-# 평일 22:00, 07:00 KST
-0 22 * * 1-5 cd /Users/jwkim/stock-pilot && .venv/bin/python run_live_short.py >> output/cron.log 2>&1
-0 7 * * 1-5 cd /Users/jwkim/stock-pilot && .venv/bin/python run_live_short.py >> output/cron.log 2>&1
+# 업로드 없이 생성만
+.venv/bin/python run_live_short.py --dry-run
+```
+
+자동 실행은 GitHub Actions `daily-short.yml` 이 담당한다 (평일 00:30 UTC = 09:30 KST).
+**로컬 cron 은 쓰지 않는다** — 둘 다 돌면 같은 내용이 두 번 게시된다.
+
+```bash
+gh workflow run daily-short.yml -f dry_run=true   # 수동 트리거 (드라이런)
+gh workflow list --all                            # 스케줄 활성 상태 확인
 ```
 
 ---
