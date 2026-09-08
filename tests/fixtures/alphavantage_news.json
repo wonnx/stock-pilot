@@ -1,0 +1,56 @@
+{
+  "items": "3",
+  "sentiment_score_definition": "x <= -0.35: Bearish; -0.35 < x <= -0.15: Somewhat-Bearish; -0.15 < x < 0.15: Neutral; 0.15 <= x < 0.35: Somewhat_Bullish; x >= 0.35: Bullish",
+  "relevance_score_definition": "0 < x <= 1, with a higher score indicating higher relevance.",
+  "feed": [
+    {
+      "title": "NVIDIA AI Chip Demand Remains Robust Heading Into 2026",
+      "url": "https://example.com/nvda-ai-demand",
+      "time_published": "20260313T090000",
+      "authors": ["Market Analysis Team"],
+      "summary": "NVIDIA's data center segment continues to see unprecedented demand as AI adoption accelerates globally.",
+      "banner_image": "https://example.com/nvda-banner.jpg",
+      "source": "Financial Times",
+      "category_within_source": "Technology",
+      "source_domain": "ft.com",
+      "topics": [
+        {"topic": "Technology", "relevance_score": "0.95"},
+        {"topic": "Earnings", "relevance_score": "0.85"}
+      ],
+      "overall_sentiment_score": 0.42,
+      "overall_sentiment_label": "Bullish",
+      "ticker_sentiment": [
+        {
+          "ticker": "NVDA",
+          "relevance_score": "0.95",
+          "ticker_sentiment_score": "0.45",
+          "ticker_sentiment_label": "Bullish"
+        }
+      ]
+    },
+    {
+      "title": "Data Center Stocks Rally as AI Infrastructure Spending Continues",
+      "url": "https://example.com/datacenter-rally",
+      "time_published": "20260313T080000",
+      "authors": ["Tech Desk"],
+      "summary": "Semiconductor and data center stocks surged on Thursday as major tech companies confirmed increased AI infrastructure budgets.",
+      "banner_image": "",
+      "source": "Reuters",
+      "category_within_source": "Markets",
+      "source_domain": "reuters.com",
+      "topics": [
+        {"topic": "Technology", "relevance_score": "0.80"}
+      ],
+      "overall_sentiment_score": 0.38,
+      "overall_sentiment_label": "Bullish",
+      "ticker_sentiment": [
+        {
+          "ticker": "NVDA",
+          "relevance_score": "0.82",
+          "ticker_sentiment_score": "0.40",
+          "ticker_sentiment_label": "Bullish"
+        }
+      ]
+    }
+  ]
+}

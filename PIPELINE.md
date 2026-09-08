@@ -63,24 +63,36 @@ Hot Stock Selection → Quant Analysis → News Collection → Content Generatio
 
 ## Running the Pipeline
 
+All paths below are relative to the repository root.
+
 ### CLI (full pipeline with Claude API)
 ```bash
-cd /Users/jwkim/stock-pilot
 .venv/bin/stock-pilot content --hot --upload
 ```
 
 ### Template mode (no API key)
 ```bash
-cd /Users/jwkim/stock-pilot
 .venv/bin/python run_live_short.py
+
+# generate only, skip uploads
+.venv/bin/python run_live_short.py --dry-run
 ```
 
-### Cron (automated daily)
-```
-0 17 * * 1-5 cd /Users/jwkim/stock-pilot && .venv/bin/stock-pilot content --hot --upload >> output/cron.log 2>&1
-```
-- Runs Mon-Fri at 5 PM EST (US market close)
-- Logs: `output/cron.log`
+### Scheduled runs — GitHub Actions only
+Scheduling lives entirely in `.github/workflows/`. **Local cron is not used**; running
+both would publish the same content twice.
+
+| Workflow | Schedule (UTC) | KST | Script |
+|----------|----------------|-----|--------|
+| `daily-short.yml` | `30 0 * * 1-5` | 평일 09:30 | `run_live_short.py` |
+| `aftermarket.yml` | `15 21 * * 1-5` | 평일 06:15 (익일) | `run_aftermarket.py` |
+| `weekly-review.yml` | `30 21 * * 5` | 토요일 06:30 | `run_weekly_review.py` |
+
+- Manual trigger: `gh workflow run daily-short.yml -f dry_run=true`
+- Logs: the workflow run itself (`gh run view --log`); on failure the `output/` directory
+  is uploaded as an artifact and a Kakao message is sent.
+- Schedules are auto-disabled by GitHub after 60 days of repository inactivity —
+  check with `gh workflow list --all`, re-enable with `gh workflow enable <file>`.
 
 ## Environment Variables
 

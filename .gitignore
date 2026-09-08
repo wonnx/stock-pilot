@@ -31,8 +31,8 @@ remotion/public/bgm_v2/
 # Node.js dependencies
 node_modules/
 remotion/node_modules/
-package-lock.json
-remotion/package-lock.json
+# Root lockfile only — remotion/package-lock.json IS tracked, CI needs it for `npm ci`
+/package-lock.json
 
 # Root package.json (auto-generated, not source)
 package.json
