@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs');
 
-const OUTPUT_DIR = '/Users/jwkim/stock-pilot/output/profiles_v3';
+const OUTPUT_DIR = path.join(__dirname, '..', 'output', 'profiles_v3');
 
 const designs = [
   // 1. 그라데이션 배경 — 동적 캔들차트 그라데이션

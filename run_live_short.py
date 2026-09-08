@@ -6,7 +6,8 @@ import time
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, "src")
+REPO_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -393,8 +394,8 @@ def run():
     logger.info("Content generated: %s", card_title)
 
     # 5. Remotion video rendering
-    output_dir = Path("/Users/jwkim/stock-pilot/output")
-    output_dir.mkdir(exist_ok=True)
+    output_dir = REPO_ROOT / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
     from datetime import datetime
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     video_path = output_dir / f"{symbol}_{ts}_short.mp4"
@@ -451,13 +452,20 @@ def run():
     )
 
     # 4d. BGM setup — Scott Buckley "Moonlight" (fixed BGM)
-    _MOONLIGHT_SRC = Path("/Users/jwkim/stock-pilot/output/bgm_v2/04_moonlight.mp3")
-    if _MOONLIGHT_SRC.exists():
-        bgm_path = _MOONLIGHT_SRC
+    # output/bgm_v2 is the local sample library and is not tracked in the repo;
+    # remotion/public holds the committed copy so CI runners have BGM too.
+    _MOONLIGHT_CANDIDATES = [
+        REPO_ROOT / "output" / "bgm_v2" / "04_moonlight.mp3",
+        REPO_ROOT / "remotion" / "public" / "04_moonlight.mp3",
+    ]
+    bgm_path = next((c for c in _MOONLIGHT_CANDIDATES if c.exists()), None)
+    if bgm_path:
         logger.info("BGM: using Moonlight (%s)", bgm_path)
     else:
-        logger.warning("BGM file not found at %s — video will have no background music", _MOONLIGHT_SRC)
-        bgm_path = None
+        logger.warning(
+            "BGM file not found in %s — video will have no background music",
+            [str(c) for c in _MOONLIGHT_CANDIDATES],
+        )
 
     logger.info("Rendering video (%.1fs, %d frames)...", total_secs, total_frames)
     ok = generate_short_video(

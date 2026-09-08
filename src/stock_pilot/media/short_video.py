@@ -107,10 +107,15 @@ def generate_short_video(
     # Copy BGM file to Remotion public dir
     bgm_name = ""
     if bgm_path and Path(bgm_path).exists():
-        dest = public_dir / Path(bgm_path).name
-        shutil.copy2(bgm_path, dest)
-        bgm_name = Path(bgm_path).name
-        logger.info("Copied BGM to remotion/public/%s", bgm_name)
+        src = Path(bgm_path).resolve()
+        dest = (public_dir / src.name).resolve()
+        bgm_name = src.name
+        if src == dest:
+            # BGM already lives in remotion/public (committed copy) — nothing to do
+            logger.info("BGM already in remotion/public/%s", bgm_name)
+        else:
+            shutil.copy2(src, dest)
+            logger.info("Copied BGM to remotion/public/%s", bgm_name)
 
     props = {
         "symbol": pkg.symbol,

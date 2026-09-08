@@ -2,7 +2,7 @@
 v12 QA 자동화 테스트 — TC-002, TC-003(코드 검증), TC-004, TC-005
 
 실행:
-    cd /Users/jwkim/stock-pilot
+    cd <repo root>
     uv run pytest tests/test_v12_qa.py -v
 
 또는:

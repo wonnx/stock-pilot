@@ -305,7 +305,7 @@ def _generate_variation(v: dict, output_wav: Path) -> None:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    output_dir = Path("/Users/jwkim/stock-pilot/output/bgm_samples")
+    output_dir = Path(__file__).resolve().parent.parent / "output" / "bgm_samples"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     logger.info("BGM 샘플 10종 생성 시작 → %s", output_dir)
