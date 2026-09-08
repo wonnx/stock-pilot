@@ -3,14 +3,31 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 from stock_pilot.content.generator import ContentPackage
 
 logger = logging.getLogger(__name__)
 REMOTION_DIR = Path(__file__).parent.parent.parent.parent / "remotion"
+
+# Render wall-clock budget. The composition renders at --scale 2 (2160x3840) with
+# crf 10, which a 2-core CI runner chews through far more slowly than a dev laptop,
+# so the ceiling is generous and overridable per environment.
+RENDER_TIMEOUT_SECS = int(os.getenv("REMOTION_RENDER_TIMEOUT", "1800"))
+STILL_TIMEOUT_SECS = int(os.getenv("REMOTION_STILL_TIMEOUT", "600"))
+
+
+def _tail(stream: str | bytes | None, limit: int = 500) -> str:
+    """Last *limit* characters of a captured stream, for timeout diagnostics."""
+    if not stream:
+        return "(no output captured)"
+    if isinstance(stream, bytes):
+        stream = stream.decode("utf-8", errors="replace")
+    return stream[-limit:]
 
 
 def generate_thumbnail(pkg: ContentPackage, output_path: Path) -> bool:
@@ -53,7 +70,7 @@ def generate_thumbnail(pkg: ContentPackage, output_path: Path) -> bool:
             cwd=str(REMOTION_DIR),
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=STILL_TIMEOUT_SECS,
         )
         if result.returncode != 0:
             logger.error("Remotion still render failed: %s", result.stderr[-500:])
@@ -62,8 +79,11 @@ def generate_thumbnail(pkg: ContentPackage, output_path: Path) -> bool:
     except FileNotFoundError:
         logger.error("npx not found — install Node.js")
         return False
-    except subprocess.TimeoutExpired:
-        logger.error("Remotion still render timed out")
+    except subprocess.TimeoutExpired as e:
+        logger.error(
+            "Remotion still render timed out after %ds; last output: %s",
+            STILL_TIMEOUT_SECS, _tail(e.stderr),
+        )
         return False
 
 
@@ -165,21 +185,26 @@ def generate_short_video(
         "--enforce-audio-track",
     ]
 
+    started = time.monotonic()
     try:
         result = subprocess.run(
             cmd,
             cwd=str(REMOTION_DIR),
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=RENDER_TIMEOUT_SECS,
         )
         if result.returncode != 0:
             logger.error("Remotion render failed: %s", result.stderr[-500:])
             return False
+        logger.info("Remotion render finished in %.1fs", time.monotonic() - started)
         return output_path.exists()
     except FileNotFoundError:
         logger.error("npx not found — install Node.js")
         return False
-    except subprocess.TimeoutExpired:
-        logger.error("Remotion render timed out")
+    except subprocess.TimeoutExpired as e:
+        logger.error(
+            "Remotion render timed out after %ds; last output: %s",
+            RENDER_TIMEOUT_SECS, _tail(e.stderr),
+        )
         return False

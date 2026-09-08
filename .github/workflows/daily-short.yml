@@ -14,7 +14,7 @@ on:
 jobs:
   generate-and-publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v7
@@ -40,6 +40,10 @@ jobs:
       - name: Install Remotion dependencies
         working-directory: remotion
         run: npm ci
+
+      - name: Pre-download Remotion browser
+        working-directory: remotion
+        run: npx remotion browser ensure
 
       - name: Run pipeline
         env:
