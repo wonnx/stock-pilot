@@ -163,6 +163,9 @@ def mocked_externals():
         p.stop()
 
 
+PUBLISHING_PIPELINES = ["run_live_short", "run_aftermarket", "run_weekly_review"]
+
+
 @pytest.mark.parametrize("module_name", ["run_aftermarket", "run_weekly_review"])
 def test_pipeline_runs_to_completion(module_name, mocked_externals, tmp_path, monkeypatch):
     """The pipeline must reach the upload step without raising or exiting non-zero."""
@@ -179,3 +182,31 @@ def test_pipeline_runs_to_completion(module_name, mocked_externals, tmp_path, mo
     # wrong directory. Entry points must hand it an absolute path.
     render_target = mocked_externals["video"].call_args.args[1]
     assert Path(render_target).is_absolute(), f"render got a relative path: {render_target}"
+
+
+@pytest.mark.parametrize("module_name", PUBLISHING_PIPELINES)
+def test_every_pipeline_defines_dry_run(module_name):
+    """Every pipeline the workflows pass DRY_RUN to must actually read it.
+
+    All three workflows set DRY_RUN in the pipeline step, but for a long time only
+    run_live_short.py defined it. `gh workflow run ... -f dry_run=true` on the other two
+    published to Instagram for real, which is not a failure mode anyone would guess from
+    reading the workflow file.
+    """
+    module = importlib.import_module(module_name)
+    assert hasattr(module, "DRY_RUN"), f"{module_name} ignores the DRY_RUN env var"
+
+
+@pytest.mark.parametrize("module_name", ["run_aftermarket", "run_weekly_review"])
+def test_dry_run_publishes_nothing(module_name, mocked_externals, tmp_path, monkeypatch):
+    """Under DRY_RUN the pipeline still renders, but must not post anywhere."""
+    module = importlib.import_module(module_name)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(module, "DRY_RUN", True)
+
+    module.run()
+
+    assert mocked_externals["video"].called, "dry run should still render"
+    mocked_externals["reel"].assert_not_called()
+    # YouTube is told rather than skipped, so assert it was told.
+    assert mocked_externals["short"].call_args.kwargs.get("dry_run") is True
