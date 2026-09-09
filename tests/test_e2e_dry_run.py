@@ -151,14 +151,34 @@ class TestE2EDryRun:
 
         self._patches = [
             patch("stock_snap.hot_stock.select_hot_stock", return_value=hot),
-            patch("stock_snap.data.fetcher.MarketDataFetcher.get_ohlcv", return_value=ohlcv),
-            patch("stock_snap.news.collector.NewsCollector.fetch_for_symbol", return_value=news_items),
+            patch(
+                "stock_snap.data.fetcher.MarketDataFetcher.get_ohlcv",
+                autospec=True,
+                return_value=ohlcv,
+            ),
+            patch(
+                "stock_snap.news.collector.NewsCollector.fetch_for_symbol",
+                autospec=True,
+                return_value=news_items,
+            ),
             patch("yfinance.Ticker", return_value=mock_ticker),
-            patch("stock_snap.media.tts.generate_tts_with_timing", side_effect=_tts_with_timing),
-            patch("stock_snap.media.tts.generate_tts", side_effect=_tts_single),
-            patch("stock_snap.media.tts.get_audio_duration", return_value=5.0),
-            patch("stock_snap.media.short_video.generate_short_video", side_effect=_make_dummy_mp4),
-            patch("stock_snap.media.short_video.generate_thumbnail", side_effect=_make_dummy_jpeg),
+            patch(
+                "stock_snap.media.tts.generate_tts_with_timing",
+                autospec=True,
+                side_effect=_tts_with_timing,
+            ),
+            patch("stock_snap.media.tts.generate_tts", autospec=True, side_effect=_tts_single),
+            patch("stock_snap.media.tts.get_audio_duration", autospec=True, return_value=5.0),
+            patch(
+                "stock_snap.media.short_video.generate_short_video",
+                autospec=True,
+                side_effect=_make_dummy_mp4,
+            ),
+            patch(
+                "stock_snap.media.short_video.generate_thumbnail",
+                autospec=True,
+                side_effect=_make_dummy_jpeg,
+            ),
             patch("stock_snap.utils.monitoring.init_sentry"),
             patch("stock_snap.utils.monitoring.capture_exception"),
             patch("stock_snap.utils.monitoring.set_sentry_tag"),

@@ -255,7 +255,7 @@ def run():
         pkg,
         video_path,
         script_segments=script_segments,
-        tts_segment_paths=tts_segment_paths,
+        audio_segment_paths=tts_segment_paths,
         subtitle_timings=all_timings,
     )
     if not ok:

@@ -106,30 +106,60 @@ def _fake_thumbnail(_pkg, out_path, *_args, **_kwargs):
 
 @pytest.fixture
 def mocked_externals():
-    """Mock everything that costs money, time, or posts publicly."""
+    """Mock everything that costs money, time, or posts publicly.
+
+    autospec is what makes this worth having. A plain MagicMock accepts any argument
+    name, so it happily swallows a call like generate_short_video(..., tts_segment_paths=...)
+    against a function whose parameter is audio_segment_paths - which is exactly the
+    second bug these pipelines were carrying. autospec validates each call against the
+    real signature, so a rename on either side fails here instead of on the runner.
+    """
     from stock_snap.upload.instagram import instagram
     from stock_snap.upload.youtube import youtube
 
-    reel = MagicMock(return_value=True)
-    short = MagicMock(return_value="fake-video-id")
-    host = MagicMock(return_value="https://example.test/video.mp4")
-
-    patches = [
-        patch("stock_snap.data.fetcher.MarketDataFetcher.get_ohlcv", return_value=_make_ohlcv()),
-        patch("yfinance.Ticker", side_effect=_fake_ticker),
-        patch("stock_snap.news.collector.NewsCollector.fetch_for_symbol", return_value=[]),
-        patch("stock_snap.media.tts.generate_tts_with_timing", side_effect=_fake_tts),
-        patch("stock_snap.media.tts.get_audio_duration", return_value=5.0),
-        patch("stock_snap.media.short_video.generate_short_video", side_effect=_fake_video),
-        patch("stock_snap.media.short_video.generate_thumbnail", side_effect=_fake_thumbnail),
-        patch("stock_snap.upload.media_host.publish_media", host),
-        patch.object(instagram, "upload_reel", reel),
-        patch.object(youtube, "upload_short", short),
-    ]
-    for p in patches:
-        p.start()
-    yield {"reel": reel, "short": short, "host": host}
-    for p in patches:
+    patches = {
+        "ohlcv": patch(
+            "stock_snap.data.fetcher.MarketDataFetcher.get_ohlcv",
+            autospec=True,
+            return_value=_make_ohlcv(),
+        ),
+        "ticker": patch("yfinance.Ticker", side_effect=_fake_ticker),
+        "news": patch(
+            "stock_snap.news.collector.NewsCollector.fetch_for_symbol",
+            autospec=True,
+            return_value=[],
+        ),
+        "tts": patch(
+            "stock_snap.media.tts.generate_tts_with_timing",
+            autospec=True,
+            side_effect=_fake_tts,
+        ),
+        "duration": patch(
+            "stock_snap.media.tts.get_audio_duration", autospec=True, return_value=5.0
+        ),
+        "video": patch(
+            "stock_snap.media.short_video.generate_short_video",
+            autospec=True,
+            side_effect=_fake_video,
+        ),
+        "thumbnail": patch(
+            "stock_snap.media.short_video.generate_thumbnail",
+            autospec=True,
+            side_effect=_fake_thumbnail,
+        ),
+        "host": patch(
+            "stock_snap.upload.media_host.publish_media",
+            autospec=True,
+            return_value="https://example.test/video.mp4",
+        ),
+        "reel": patch.object(instagram, "upload_reel", autospec=True, return_value=True),
+        "short": patch.object(
+            youtube, "upload_short", autospec=True, return_value="fake-video-id"
+        ),
+    }
+    mocks = {name: p.start() for name, p in patches.items()}
+    yield mocks
+    for p in patches.values():
         p.stop()
 
 
