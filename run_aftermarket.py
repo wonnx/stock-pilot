@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -10,6 +11,11 @@ REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+# Dry-run: generate everything but publish nothing.
+# The workflows have always passed DRY_RUN in; until now only run_live_short.py read it,
+# so `gh workflow run ... -f dry_run=true` published for real from here.
+DRY_RUN: bool = os.getenv("DRY_RUN", "false").lower() in ("1", "true", "yes") or "--dry-run" in sys.argv
 
 UNIVERSE = [
     "AAPL", "MSFT", "NVDA", "TSLA", "AMZN", "META", "GOOGL",
@@ -277,13 +283,17 @@ def run():
         cover_url = _host(thumbnail_path, "image/jpeg") or ""
 
     # Instagram Reels 업로드
-    reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
+    if DRY_RUN:
+        logger.info("[dry-run] Instagram Reels upload skipped")
+        reels_ok = True
+    else:
+        reels_ok = instagram.upload_reel(video_url, caption, cover_url=cover_url)
 
     # YouTube Shorts 업로드
     yt_title = f"{card_title} | Stock Snap 마감브리핑"
     yt_desc = caption + "\n\n#Shorts #주식 #미국주식 #마감"
     yt_tags = [symbol, "주식", "미국주식", "마감브리핑", "Shorts"]
-    yt_video_id = youtube.upload_short(video_path, yt_title, yt_desc, yt_tags)
+    yt_video_id = youtube.upload_short(video_path, yt_title, yt_desc, yt_tags, dry_run=DRY_RUN)
 
     if reels_ok or yt_video_id:
         logger.info("Aftermarket recap published successfully!")
