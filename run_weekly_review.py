@@ -6,7 +6,8 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-sys.path.insert(0, "src")
+REPO_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -231,7 +232,7 @@ def run():
 
     # 6. 출력 경로
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = Path("output") / f"weekly_{symbol}_{ts}"
+    output_dir = REPO_ROOT / "output" / f"weekly_{symbol}_{ts}"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 7. TTS 생성 (세그먼트별)

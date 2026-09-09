@@ -36,6 +36,10 @@ def generate_thumbnail(pkg: ContentPackage, output_path: Path) -> bool:
         logger.error("Remotion project not found at %s", REMOTION_DIR)
         return False
 
+    # See generate_short_video: the CLI runs from remotion/, so this has to be absolute.
+    output_path = Path(output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
     props = {
         "symbol": pkg.symbol,
         "price": pkg.price,
@@ -102,6 +106,11 @@ def generate_short_video(
     if not REMOTION_DIR.exists():
         logger.error("Remotion project not found at %s", REMOTION_DIR)
         return False
+
+    # The CLI runs with cwd=REMOTION_DIR, so a relative output path would be written
+    # under remotion/ while the existence check below looks somewhere else entirely.
+    output_path = Path(output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     public_dir = REMOTION_DIR / "public"
     public_dir.mkdir(exist_ok=True)

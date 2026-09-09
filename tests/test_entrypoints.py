@@ -174,3 +174,8 @@ def test_pipeline_runs_to_completion(module_name, mocked_externals, tmp_path, mo
 
     assert mocked_externals["host"].called, "video was never given a public URL"
     assert mocked_externals["reel"].called, "Instagram upload was never attempted"
+
+    # The render runs from remotion/, so anything cwd-relative resolves against the
+    # wrong directory. Entry points must hand it an absolute path.
+    render_target = mocked_externals["video"].call_args.args[1]
+    assert Path(render_target).is_absolute(), f"render got a relative path: {render_target}"
