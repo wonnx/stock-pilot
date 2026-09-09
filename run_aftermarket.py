@@ -150,7 +150,7 @@ def run():
 
     from stock_snap.analysis.indicators import TechnicalAnalyzer
     from stock_snap.content.generator import ContentPackage
-    from stock_snap.data.fetcher import StockDataFetcher
+    from stock_snap.data.fetcher import MarketDataFetcher
     from stock_snap.media.short_video import generate_short_video
     from stock_snap.media.tts import generate_tts_with_timing
     from stock_snap.news.collector import NewsCollector
@@ -172,7 +172,7 @@ def run():
     logger.info("Aftermarket hot stock: %s %+.2f%%", symbol, change_pct)
 
     # 2. 기술적 분석
-    fetcher = StockDataFetcher()
+    fetcher = MarketDataFetcher()
     df = fetcher.get_ohlcv(symbol, period="3mo", interval="1d")
     analyzer = TechnicalAnalyzer()
     tech = analyzer.compute(symbol, df)
