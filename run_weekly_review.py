@@ -147,7 +147,12 @@ def run():
     from stock_snap.analysis.indicators import TechnicalAnalyzer
     from stock_snap.content.generator import ContentPackage
     from stock_snap.data.fetcher import MarketDataFetcher
-    from stock_snap.media.short_video import generate_short_video, generate_thumbnail
+    from stock_snap.media.short_video import (
+        generate_short_video,
+        generate_thumbnail,
+        resolve_bgm_path,
+        scene_timing,
+    )
     from stock_snap.media.tts import generate_tts_with_timing
     from stock_snap.news.collector import NewsCollector
     from stock_snap.upload.instagram import instagram
@@ -256,13 +261,33 @@ def run():
             tts_segment_paths.append(None)
             all_timings.append([])
 
+    # A dropped segment would shift every later one onto the wrong scene, so if the set
+    # is incomplete fall back to one narration file spanning the whole video.
+    audio_path = None
+    if not all(tts_segment_paths) or len(tts_segment_paths) != 5:
+        from stock_snap.media.tts import generate_tts
+
+        logger.warning("TTS segments incomplete — falling back to a single audio file")
+        single = output_dir / f"{symbol}_{ts}_tts.mp3"
+        if generate_tts(" ".join(script_segments), single):
+            audio_path = single
+            tts_segment_paths = []
+            all_timings = []
+        else:
+            logger.error("TTS fallback failed — video would be silent")
+
     # 8. 영상 렌더링
     video_path = output_dir / f"{symbol}_{ts}_weekly.mp4"
+    scene_frames, total_frames = scene_timing(tts_segment_paths)
     ok = generate_short_video(
         pkg,
         video_path,
+        audio_path,
         script_segments=script_segments,
         audio_segment_paths=tts_segment_paths,
+        bgm_path=resolve_bgm_path(),
+        total_frames=total_frames,
+        scene_durations=scene_frames,
         subtitle_timings=all_timings,
     )
     if not ok:
