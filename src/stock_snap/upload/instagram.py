@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 
 import httpx
@@ -10,6 +11,11 @@ from stock_snap.utils.config import config
 
 logger = logging.getLogger(__name__)
 IG_API_BASE = "https://graph.facebook.com/v19.0"
+
+# How long to wait for Instagram to finish transcoding a Reels container. The old 120s
+# was enough for a 45s clip but not for a ~113s one at 2160x3840, which is why the daily
+# short timed out while the aftermarket recap went through.
+CONTAINER_TIMEOUT_SECS = int(os.getenv("INSTAGRAM_CONTAINER_TIMEOUT", "600"))
 
 
 class InstagramUploader:
@@ -54,25 +60,35 @@ class InstagramUploader:
             logger.error("Instagram photo upload failed: %s", e)
             return False
 
-    def _wait_for_container(self, container_id: str, timeout: int = 120) -> bool:
+    def _wait_for_container(self, container_id: str, timeout: int | None = None) -> bool:
         """Poll until Reels container processing completes. Returns True on FINISHED."""
-        deadline = time.time() + timeout
+        timeout = CONTAINER_TIMEOUT_SECS if timeout is None else timeout
+        started = time.time()
+        deadline = started + timeout
         while time.time() < deadline:
             resp = httpx.get(
                 f"{IG_API_BASE}/{container_id}",
-                params={"fields": "status_code", "access_token": self._token},
+                # `status` carries the human-readable reason; without it an ERROR tells
+                # us only that something went wrong, which is not enough to act on.
+                params={"fields": "status_code,status", "access_token": self._token},
                 timeout=15,
             )
             resp.raise_for_status()
-            status = resp.json().get("status_code", "")
+            body = resp.json()
+            status = body.get("status_code", "")
             logger.info("Container %s status: %s", container_id, status)
             if status == "FINISHED":
+                logger.info("Container ready after %.0fs", time.time() - started)
                 return True
             if status == "ERROR":
-                logger.error("Container processing error")
+                logger.error("Container processing error: %s", body.get("status", "(no detail)"))
                 return False
             time.sleep(5)
-        logger.error("Container processing timed out after %ds", timeout)
+        logger.error(
+            "Container processing timed out after %ds. Instagram transcodes larger "
+            "videos more slowly; raise INSTAGRAM_CONTAINER_TIMEOUT if this recurs.",
+            timeout,
+        )
         return False
 
     def upload_reel(self, video_url: str, caption: str, cover_url: str = "") -> bool:

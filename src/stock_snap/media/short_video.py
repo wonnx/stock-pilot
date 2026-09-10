@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import shutil
 import subprocess
@@ -19,6 +20,65 @@ REMOTION_DIR = Path(__file__).parent.parent.parent.parent / "remotion"
 # so the ceiling is generous and overridable per environment.
 RENDER_TIMEOUT_SECS = int(os.getenv("REMOTION_RENDER_TIMEOUT", "1800"))
 STILL_TIMEOUT_SECS = int(os.getenv("REMOTION_STILL_TIMEOUT", "600"))
+
+
+FPS = 30
+SCENE_COUNT = 5
+# Floor per scene, so a short narration still leaves the visuals on screen long enough
+# to read. Index order is hero, news, chart, indicators, conclusion.
+MIN_SCENE_SECS = [5.0, 8.0, 6.0, 8.0, 6.0]
+FALLBACK_SCENE_SECS = [5.0, 12.0, 9.0, 11.0, 8.0]
+
+
+def resolve_bgm_path() -> Path | None:
+    """Locate the background music track.
+
+    output/bgm_v2 is the local sample library and is not tracked; remotion/public holds
+    the committed copy so CI runners get music too.
+    """
+    repo_root = REMOTION_DIR.parent
+    candidates = [
+        repo_root / "output" / "bgm_v2" / "04_moonlight.mp3",
+        repo_root / "remotion" / "public" / "04_moonlight.mp3",
+    ]
+    found = next((c for c in candidates if c.exists()), None)
+    if found:
+        logger.info("BGM: using Moonlight (%s)", found)
+    else:
+        logger.warning(
+            "BGM file not found in %s — video will have no background music",
+            [str(c) for c in candidates],
+        )
+    return found
+
+
+def scene_timing(segment_paths: list[Path] | None) -> tuple[list[int], int]:
+    """Derive per-scene frame counts from the measured narration length.
+
+    Returns (scene_durations, total_frames). Without one audio file per scene the
+    composition falls back to fixed lengths, which is what every pipeline except
+    run_live_short.py used to do unconditionally — leaving a 60s script inside a 45s
+    video.
+    """
+    from stock_snap.media.tts import get_audio_duration
+
+    usable = bool(segment_paths) and len(segment_paths) == SCENE_COUNT and all(segment_paths)
+    if usable:
+        scene_secs = []
+        for i, seg in enumerate(segment_paths):
+            measured = get_audio_duration(seg)
+            measured = measured if measured > 0 else MIN_SCENE_SECS[i]
+            scene_secs.append(max(measured + 1.0, MIN_SCENE_SECS[i]))  # +1s buffer
+    else:
+        scene_secs = list(FALLBACK_SCENE_SECS)
+
+    scene_frames = [math.ceil(s * FPS) for s in scene_secs]
+    total_frames = sum(scene_frames) + FPS  # +1s tail
+    logger.info(
+        "Video timing: scenes=%s total=%.1fs (%d frames)",
+        [f"{s:.1f}s" for s in scene_secs], total_frames / FPS, total_frames,
+    )
+    return scene_frames, total_frames
 
 
 def _tail(stream: str | bytes | None, limit: int = 500) -> str:
@@ -119,7 +179,8 @@ def generate_short_video(
     audio_segment_names: list[str] = []
     if audio_segment_paths:
         for seg_path in audio_segment_paths:
-            if Path(seg_path).exists():
+            # A failed TTS segment arrives as None; Path(None) would raise.
+            if seg_path and Path(seg_path).exists():
                 dest = public_dir / Path(seg_path).name
                 shutil.copy2(seg_path, dest)
                 audio_segment_names.append(Path(seg_path).name)

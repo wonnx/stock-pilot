@@ -198,6 +198,39 @@ def test_every_pipeline_defines_dry_run(module_name):
 
 
 @pytest.mark.parametrize("module_name", ["run_aftermarket", "run_weekly_review"])
+def test_render_gets_audio_bgm_and_real_timing(
+    module_name, mocked_externals, tmp_path, monkeypatch
+):
+    """The render must receive narration, music, and a duration derived from the TTS.
+
+    All three were missing. The aftermarket script had 3 segments against a 5-scene
+    composition, so the template's `audioSegments.length === 5` check fell through to an
+    audioPath nobody set and rendered a silent video: measured at -91 dB, and one of
+    those went out to Instagram. Neither pipeline passed bgm_path, and neither passed
+    total_frames, so both were pinned to the 1350-frame (45s) default regardless of how
+    long the narration actually ran.
+    """
+    module = importlib.import_module(module_name)
+    monkeypatch.chdir(tmp_path)
+
+    module.run()
+
+    call = mocked_externals["video"].call_args
+    segments = call.kwargs.get("audio_segment_paths") or []
+    single = call.args[2] if len(call.args) > 2 else None
+    assert segments or single, "render was given no audio at all — the video would be silent"
+    if segments:
+        assert len(segments) == 5, (
+            f"{len(segments)} segments against a 5-scene composition; "
+            "the template maps segment i onto scene i"
+        )
+
+    assert call.kwargs.get("bgm_path") is not None, "no background music"
+    assert call.kwargs.get("total_frames") != 1350, "duration left at the fixed default"
+    assert len(call.kwargs.get("scene_durations") or []) == 5
+
+
+@pytest.mark.parametrize("module_name", ["run_aftermarket", "run_weekly_review"])
 def test_dry_run_publishes_nothing(module_name, mocked_externals, tmp_path, monkeypatch):
     """Under DRY_RUN the pipeline still renders, but must not post anywhere."""
     module = importlib.import_module(module_name)

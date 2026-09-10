@@ -416,45 +416,13 @@ def run():
         else:
             logger.warning("TTS generation skipped")
 
-    # 4c. Compute dynamic video timing based on TTS durations
-    from stock_snap.media.tts import get_audio_duration
-    import math
-    FPS = 30
-    MIN_SCENE_SECS = [5.0, 8.0, 6.0, 8.0, 6.0]  # minimum per scene
-    scene_secs = []
-    if len(tts_segment_paths) == 5:
-        for i, seg_path in enumerate(tts_segment_paths):
-            dur = get_audio_duration(seg_path)
-            dur = dur if dur > 0 else MIN_SCENE_SECS[i]
-            scene_secs.append(max(dur + 1.0, MIN_SCENE_SECS[i]))  # +1s buffer
-    else:
-        scene_secs = [5.0, 12.0, 9.0, 11.0, 8.0]  # fallback to fixed
+    # 4c. Timing and BGM come from the shared helpers so all three pipelines agree.
+    from stock_snap.media.short_video import resolve_bgm_path, scene_timing
 
-    scene_dur_frames = [math.ceil(s * FPS) for s in scene_secs]
-    total_frames = sum(scene_dur_frames) + FPS  # +1s final buffer
-    total_secs = total_frames / FPS
-    logger.info(
-        "Video timing: scenes=%s total=%.1fs (%d frames)",
-        [f"{s:.1f}s" for s in scene_secs], total_secs, total_frames,
-    )
+    scene_dur_frames, total_frames = scene_timing(tts_segment_paths)
+    bgm_path = resolve_bgm_path()
 
-    # 4d. BGM setup — Scott Buckley "Moonlight" (fixed BGM)
-    # output/bgm_v2 is the local sample library and is not tracked in the repo;
-    # remotion/public holds the committed copy so CI runners have BGM too.
-    _MOONLIGHT_CANDIDATES = [
-        REPO_ROOT / "output" / "bgm_v2" / "04_moonlight.mp3",
-        REPO_ROOT / "remotion" / "public" / "04_moonlight.mp3",
-    ]
-    bgm_path = next((c for c in _MOONLIGHT_CANDIDATES if c.exists()), None)
-    if bgm_path:
-        logger.info("BGM: using Moonlight (%s)", bgm_path)
-    else:
-        logger.warning(
-            "BGM file not found in %s — video will have no background music",
-            [str(c) for c in _MOONLIGHT_CANDIDATES],
-        )
-
-    logger.info("Rendering video (%.1fs, %d frames)...", total_secs, total_frames)
+    logger.info("Rendering video (%.1fs, %d frames)...", total_frames / 30, total_frames)
     ok = generate_short_video(
         pkg, video_path, audio_path,
         audio_segment_paths=tts_segment_paths if tts_segment_paths else None,

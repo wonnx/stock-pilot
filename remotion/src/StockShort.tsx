@@ -562,6 +562,7 @@ export const StockShort: React.FC<Props> = ({
   const S4_EXIT  = dur[0] + dur[1] + dur[2] + dur[3];
   const S5_ENTER = dur[0] + dur[1] + dur[2] + dur[3];
   const _S5_EXIT = S5_ENTER + dur[4]; // used for subtitle range
+  const SCENE_STARTS = [S1_ENTER, S2_ENTER, S3_ENTER, S4_ENTER, S5_ENTER];
 
   const accentColor = changePct > 0 ? GREEN : changePct < 0 ? RED : YELLOW;
   const sign = changePct > 0 ? '▲' : changePct < 0 ? '▼' : '■';
@@ -594,14 +595,19 @@ export const StockShort: React.FC<Props> = ({
       overflow: 'hidden',
     }}>
 
-      {/* Audio: per-scene TTS segments with dynamic timing */}
-      {audioSegments.length === 5 ? (
+      {/* Audio: per-scene TTS segments with dynamic timing.
+          Mapped over whatever arrives rather than requiring exactly 5. This used to be
+          `audioSegments.length === 5`, so a 3-segment script fell through to audioPath,
+          which those pipelines never set, and rendered a completely silent video. */}
+      {audioSegments.length > 0 ? (
         <>
-          <Sequence from={S1_ENTER} durationInFrames={dur[0]}><Audio src={staticFile(audioSegments[0])} volume={1} /></Sequence>
-          <Sequence from={S2_ENTER} durationInFrames={dur[1]}><Audio src={staticFile(audioSegments[1])} volume={1} /></Sequence>
-          <Sequence from={S3_ENTER} durationInFrames={dur[2]}><Audio src={staticFile(audioSegments[2])} volume={1} /></Sequence>
-          <Sequence from={S4_ENTER} durationInFrames={dur[3]}><Audio src={staticFile(audioSegments[3])} volume={1} /></Sequence>
-          <Sequence from={S5_ENTER} durationInFrames={dur[4]}><Audio src={staticFile(audioSegments[4])} volume={1} /></Sequence>
+          {audioSegments
+            .slice(0, SCENE_STARTS.length)
+            .map((segment, i) => (
+              <Sequence key={segment} from={SCENE_STARTS[i]} durationInFrames={dur[i]}>
+                <Audio src={staticFile(segment)} volume={1} />
+              </Sequence>
+            ))}
         </>
       ) : audioPath ? (
         <Audio src={staticFile(audioPath)} volume={1} />

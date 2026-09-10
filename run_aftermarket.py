@@ -103,8 +103,14 @@ def select_aftermarket_hot_stock():
 
 
 def build_aftermarket_script(symbol: str, price: float, change_pct: float,
-                              direction: str, tech, news_items: list) -> list[str]:
-    """애프터마켓 리캡용 TTS 스크립트 세그먼트 생성 (3개 세그먼트, 약 30초)."""
+                              direction: str, tech, news_items: list,
+                              chart_data: list[float] | None = None) -> list[str]:
+    """애프터마켓 리캡용 TTS 스크립트 세그먼트 생성 (5개 세그먼트).
+
+    StockShort 컴포지션은 hero/news/chart/indicators/conclusion 다섯 장면을 항상
+    렌더한다. 이전에는 세 개만 만들어서 차트와 지표 장면이 화면에 떠 있는데
+    나레이션이 없었고, 개수가 안 맞아 오디오가 통째로 빠졌다.
+    """
     name = COMPANY_NAMES_KO.get(symbol, symbol)
     arrow = "급등" if change_pct > 0 else "급락"
     arrow_sign = "상승" if change_pct > 0 else "하락"
@@ -133,8 +139,37 @@ def build_aftermarket_script(symbol: str, price: float, change_pct: float,
             f"시장 전반적인 {arrow_sign} 심리와 섹터 모멘텀이 작용했습니다."
         )
 
-    # 세그먼트 3: 내일 관전 포인트 (Conclusion)
+    # 세그먼트 3: 20거래일 흐름 (Chart)
+    if chart_data and len(chart_data) >= 2:
+        pct_20d = ((chart_data[-1] / chart_data[0]) - 1) * 100
+        trend = (
+            "강한 상승추세" if pct_20d > 5
+            else "완만한 상승 흐름" if pct_20d > 0
+            else "완만한 하락 흐름" if pct_20d > -5
+            else "가파른 하락세"
+        )
+        seg_chart = (
+            f"최근 20거래일 흐름입니다. "
+            f"20일 전 {chart_data[0]:.2f}달러에서 현재 {chart_data[-1]:.2f}달러로, "
+            f"{trend}를 보이며 총 {abs(pct_20d):.1f}퍼센트 "
+            f"{'상승했습니다' if pct_20d > 0 else '하락했습니다'}."
+        )
+    else:
+        seg_chart = "최근 20거래일 차트 흐름을 함께 확인해 보시기 바랍니다."
+
+    # 세그먼트 4: 기술적 지표 (Indicators)
     rsi = getattr(tech, "rsi14", 50)
+    macd = getattr(tech, "macd", 0.0)
+    macd_signal = getattr(tech, "macd_signal", 0.0)
+    rsi_zone = "과매수" if rsi >= 70 else "과매도" if rsi <= 30 else "중립"
+    seg_indicators = (
+        f"기술적 지표를 살펴보겠습니다. "
+        f"RSI는 {rsi:.0f}로 {rsi_zone} 구간이며, "
+        f"MACD는 "
+        f"{'골든크로스로 상승 모멘텀을 시사합니다' if macd > macd_signal else '데드크로스로 하방 압력이 이어지고 있습니다'}."
+    )
+
+    # 세그먼트 5: 내일 관전 포인트 (Conclusion)
     if change_pct > 0:
         if rsi > 70:
             outlook = "과매수 구간에 진입한 만큼 내일 차익 실현 압력에 주의가 필요합니다."
@@ -148,7 +183,7 @@ def build_aftermarket_script(symbol: str, price: float, change_pct: float,
 
     seg_conclusion = f"내일 관전 포인트입니다. {outlook} 투자에는 항상 신중을 기하시기 바랍니다."
 
-    return [seg_hero, seg_news, seg_conclusion]
+    return [seg_hero, seg_news, seg_chart, seg_indicators, seg_conclusion]
 
 
 def run():
@@ -158,7 +193,11 @@ def run():
     from stock_snap.analysis.indicators import TechnicalAnalyzer
     from stock_snap.content.generator import ContentPackage
     from stock_snap.data.fetcher import MarketDataFetcher
-    from stock_snap.media.short_video import generate_short_video
+    from stock_snap.media.short_video import (
+        generate_short_video,
+        resolve_bgm_path,
+        scene_timing,
+    )
     from stock_snap.media.tts import generate_tts_with_timing
     from stock_snap.news.collector import NewsCollector
     from stock_snap.upload.instagram import instagram
@@ -190,7 +229,9 @@ def run():
     news_items = collector.fetch_for_symbol(symbol, max_items=5)
 
     # 4. TTS 스크립트 생성
-    script_segments = build_aftermarket_script(symbol, price, change_pct, direction, tech, news_items)
+    script_segments = build_aftermarket_script(
+        symbol, price, change_pct, direction, tech, news_items, chart_data
+    )
     script = " ".join(script_segments)
 
     # 5. ContentPackage 조립
@@ -246,13 +287,33 @@ def run():
             tts_segment_paths.append(None)
             all_timings.append([])
 
+    # A dropped segment would shift every later one onto the wrong scene, so if the set
+    # is incomplete fall back to one narration file spanning the whole video.
+    audio_path = None
+    if not all(tts_segment_paths) or len(tts_segment_paths) != 5:
+        from stock_snap.media.tts import generate_tts
+
+        logger.warning("TTS segments incomplete — falling back to a single audio file")
+        single = output_dir / f"{symbol}_{ts}_tts.mp3"
+        if generate_tts(" ".join(script_segments), single):
+            audio_path = single
+            tts_segment_paths = []
+            all_timings = []
+        else:
+            logger.error("TTS fallback failed — video would be silent")
+
     # 8. 영상 렌더링
     video_path = output_dir / f"{symbol}_{ts}_aftermarket.mp4"
+    scene_frames, total_frames = scene_timing(tts_segment_paths)
     ok = generate_short_video(
         pkg,
         video_path,
+        audio_path,
         script_segments=script_segments,
         audio_segment_paths=tts_segment_paths,
+        bgm_path=resolve_bgm_path(),
+        total_frames=total_frames,
+        scene_durations=scene_frames,
         subtitle_timings=all_timings,
     )
     if not ok:
